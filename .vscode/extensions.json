@@ -1,8 +1,5 @@
 {
     "recommendations": [
-        "jeff-hykin.better-cpp-syntax",
-        "ms-vscode.cmake-tools",
-        "ms-vscode.cpptools-extension-pack",
         "ms-python.python",
         "jacqueslucke.blender-development",
         "blenderfreetimeprojects.blender-python-code-templates"
