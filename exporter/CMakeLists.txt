@@ -16,8 +16,9 @@ endif()
 
 INCLUDE("CMakeSettings.txt")
 
-FBX_PROJECT(ReSaveFbx .)
+FBX_PROJECT(HalFbxExporter .)
 SET(FBX_TARGET_SOURCE
+    src/HalFbxExporter.h
     src/HalFbxExporter.cxx
     src/Common.h
     src/Common.cxx

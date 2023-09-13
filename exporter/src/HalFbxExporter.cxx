@@ -1,11 +1,11 @@
-# Copyright 2023 HALBY
-# This program is distributed under the terms of the MIT License. See the file LICENSE for details.
+// Copyright 2023 HALBY
+// This program is distributed under the terms of the MIT License. See the file LICENSE for details.
 
-#include "Common.h"
+#include "HalFbxExporter.h"
 
 static bool gVerbose = true;
 
-int main(int argc, char** argv)
+DLLEXPORT int __stdcall ExportFbx(char* pFilePath)
 {
     FbxManager* lSdkManager = NULL;
     FbxScene* lScene = NULL;
@@ -15,42 +15,28 @@ int main(int argc, char** argv)
     InitializeSdkObjects(lSdkManager, lScene);
 
     // The example can take a FBX file as an argument.
-	FbxString lFilePath("");
-	for( int i = 1, c = argc; i < c; ++i )
-	{
-		if( FbxString(argv[i]) == "-test" ) gVerbose = false;
-		else if( lFilePath.IsEmpty() ) lFilePath = argv[i];
-	}
+	FbxString lFilePath(pFilePath);
 
 	if( lFilePath.IsEmpty() )
 	{
         lResult = false;
-        FBXSDK_printf("\n\nUsage: ImportScene <FBX file name>\n\n");
-	}
-	else
-	{
-		FBXSDK_printf("\n\nFile: %s\n\n", lFilePath.Buffer());
-        
-        char* lPath = NULL;
-        FbxAnsiToUTF8(lFilePath.Buffer(), lPath, NULL);
-        lFilePath = lPath;
-
-		lResult = LoadScene(lSdkManager, lScene, lFilePath.Buffer());
+        FBXSDK_printf("\n\nFile path is invalid.\n\n");
+        DestroySdkObjects(lSdkManager, lResult);
+        return 1;
 	}
 
+    FBXSDK_printf("\n\nSave path: %s\n\n", lFilePath.Buffer());
+
+    char* lPath = NULL;
+    FbxAnsiToUTF8(lFilePath.Buffer(), lPath, NULL);
+    lFilePath = lPath;
+
+    lResult = SaveScene(lSdkManager, lScene, lFilePath.Buffer());
     if(lResult == false)
     {
-        FBXSDK_printf("\n\nAn error occurred while loading the scene...");
-    }
-    else 
-    {
-        lResult = SaveScene(lSdkManager, lScene, lFilePath.Buffer());
-        if(lResult == false)
-        {
-            FBXSDK_printf("\n\nAn error occurred while saving the scene...\n");
-            DestroySdkObjects(lSdkManager, lResult);
-            return 0;
-        }
+        FBXSDK_printf("\n\nAn error occurred while saving the scene...\n");
+        DestroySdkObjects(lSdkManager, lResult);
+        return 1;
     }
 
     // Destroy all objects created by the FBX SDK.

@@ -2,6 +2,6 @@
     "recommendations": [
         "jeff-hykin.better-cpp-syntax",
         "ms-vscode.cmake-tools",
-        "ms-vscode.cpptools-extension-pack"
+        "ms-vscode.cpptools"
     ]
 }

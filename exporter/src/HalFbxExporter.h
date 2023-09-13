@@ -4,6 +4,10 @@
 #ifndef _HALFBXEXPORTER_H
 #define _HALFBXEXPORTER_H
 
+#include "Common.h"
 
+#define DLLEXPORT extern "C" __declspec(dllexport)
+
+DLLEXPORT int __stdcall ExportFbx(char* pFilePath);
 
 #endif // #ifndef _HALFBXEXPORTER_H

@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.uxml": "xml",
+        "*.uss": "css",
+        "ssh_config": "ssh_config",
+        ".env.*": "properties",
+        "*.lilblock": "shaderlab",
+        "*.env": "properties",
+        "CmakeSettings.txt": "cmake",
+        "cstddef": "cpp"
+    }
+}
