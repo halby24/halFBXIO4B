@@ -1,3 +1,6 @@
+# Copyright 2023 HALBY
+# This program is distributed under the terms of the MIT License. See the file LICENSE for details.
+
 #include "Common.h"
 
 static bool gVerbose = true;

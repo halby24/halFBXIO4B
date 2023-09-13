@@ -18,7 +18,7 @@ ReSaveFbx.exe <FBXファイル>
 
 MIT License
 
-このソフトウェアには一部FBX SDKのサンプルコードが含まれますが、FBX SDKのライセンスに基づき同様にMIT Licenseによって提供されます。
+このソフトウェアには一部FBX SDKのサンプルコードが含まれます。
 
 ## ビルド方法
 
