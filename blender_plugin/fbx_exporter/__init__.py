@@ -7,5 +7,4 @@ import bpy
 
 from . import fbx_exporter
 
-FbxExporter = fbx_exporter.FbxExporter
-
+FbxExporter = fbx_exporter.HALFBXEXP_OT_FbxExporter
