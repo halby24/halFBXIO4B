@@ -30,8 +30,10 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
         topBox = layout.box()
 
     def execute(self, context):
-        filepath = bpy.path.ensure_ext(self.filepath, self.my_file_type)
-        
+        filepath = bpy.path.ensure_ext(self.filepath, self.filename_ext)
+        print(filepath)
+
+        return {'FINISHED'}
 
 
 def create_export_menu(self, context):
