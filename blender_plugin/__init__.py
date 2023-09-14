@@ -14,11 +14,11 @@
 bl_info = {
     "name" : "HalFbxExporter",
     "author" : "HALBY",
-    "description" : "",
-    "blender" : (2, 80, 0),
+    "description" : "Export fbx files with official FBX SDK.",
+    "blender" : (3, 6, 0),
     "version" : (0, 0, 1),
-    "category": "3D View",
-    "location": "3D View > Tools Panel > Hal Fbx Exporter",
+    "category": "Import-Export",
+    "location": "File > Import-Export",
     "warning" : "",
 }
 
