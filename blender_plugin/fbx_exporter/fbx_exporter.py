@@ -8,7 +8,7 @@ import ctypes
 import bpy
 import bpy_extras
 from bpy.props import StringProperty, EnumProperty
-from i18n import fbx_exporter_dict
+from .i18n import fbx_exporter_dict
 
 class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     """This appears in the tooltip of the operator and in the generated docs"""
@@ -16,7 +16,7 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
     bl_label = "HalFbxExporter"
     bl_options = {'UNDO', 'PRESET'}
 
-    fbxlib = ctypes.CDLL(os.path.join(os.path.dirname(__file__), "..", "lib", "HalFbxExporter.dll"))
+    fbxlib = ctypes.CDLL(os.path.join(os.path.dirname(__file__), "..", "bin", "HalFbxExporter." + ("dll" if os.name == "nt" else "so")))
 
     # ExportHelper mixin class uses this
     filename_ext = ".fbx"
