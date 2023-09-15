@@ -16,5 +16,8 @@ class ConstructExportObject:
     @staticmethod
     def getExportObjFromBlenderObj(obj: bpy.types.Object) -> ObjectData:
         obj_data = ObjectData()
-        obj_data.name = obj.name
+        name_bytes = bytes(obj.name, 'utf-8')
+        obj_data.name = ctypes.create_string_buffer(name_bytes)
+        obj_data.name_length = len(name_bytes)
+        obj_data.local_matrix = obj.matrix_local
         
