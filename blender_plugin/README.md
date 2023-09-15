@@ -4,8 +4,7 @@ This is a Blender plugin to export a 3D model to the FBX format with official FB
 
 ## License
 
-This software is licensed under the terms of the GPL v3 license.
-see COPYING for more details.
+This software is released under the MIT license.
 
 Released version of this software includes the FBX SDK from Autodesk, which requires the developer to put the following statement in the online document.
 
