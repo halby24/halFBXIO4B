@@ -10,7 +10,7 @@ typedef struct
 {
     char* name;
     size_t name_length;
-    float local_matrix[16];
+    float matrix_local[16];
     ObjectData* parent;
 } ObjectData;
 
