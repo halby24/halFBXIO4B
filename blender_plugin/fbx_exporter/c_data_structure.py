@@ -7,8 +7,7 @@ class ObjectData(ctypes.Structure):
     _pack_ = 1
 
 ObjectData._fields_ = (
-    ('name', ctypes.POINTER(ctypes.c_char)),
-    ('name_length', ctypes.c_size_t),
+    ('name', ctypes.c_char_p),
     ('matrix_local', ctypes.c_float * 16),
     ('parent', ctypes.POINTER(ObjectData)),
 )

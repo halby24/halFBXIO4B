@@ -6,18 +6,20 @@
 
 #pragma pack(push, 1)
 
-typedef struct
+struct ObjectData
 {
     char* name;
     size_t name_length;
     float matrix_local[16];
     ObjectData* parent;
-} ObjectData;
+};
 
-typedef struct
+struct ExportData
 {
     ObjectData* objects;
     size_t object_count;
-} ExportData;
+};
+
+#pragma pack(pop)
 
 #endif

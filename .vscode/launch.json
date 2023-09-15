@@ -1,0 +1,22 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Export Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "c:/Program Files/Blender Foundation/Blender 3.6/blender.exe",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--background",
+                "--python",
+                "${workspaceFolder}/launch.py"
+            ],
+            "envFile": "${workspaceFolder}/.vscode/.env"
+        }
+    ]
+}

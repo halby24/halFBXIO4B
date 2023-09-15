@@ -4,32 +4,39 @@
 import itertools
 import bpy
 from .c_data_structure import *
+from collections import namedtuple
 
 class ConstructExportObject:
-    def __init__(self, objs: [bpy.types.Object]) -> None:
+    def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.objs = objs
     
     def getExportData(self) -> ExportData:
         export_data = ExportData()
-        for obj in self.objs:
-            export_data.objects.append(self.getExportObject(obj))
+        export_objs = self.getExportObjsFromBlenderObjs(self.objs)
+        export_data.objects = (ObjectData * len(export_objs))(*export_objs)
+        export_data.object_count = len(export_objs)
+        return export_data
 
     @staticmethod
-    def getExportObjsFromBlenderObjs(objs: [bpy.types.Object]) -> [ObjectData]:
-        obj_datas = []
-        for obj in objs:
+    def getExportObjsFromBlenderObjs(objs: list[bpy.types.Object]) -> list[ObjectData]:
+        # create object data
+        obj_infos = []
+        for obj_orig in objs:
             obj_data = ObjectData()
-            name_bytes = bytes(obj.name, 'utf-8')
-            obj_data.name = ctypes.create_string_buffer(name_bytes)
-            obj_data.name_length = len(name_bytes)
-            obj_data.matrix_local = list(itertools.chain.from_iterable(obj.matrix_local)) # flatten matrix_local
-            obj_datas.append([obj, obj_data])
+            obj_data.name = obj_orig.name.encode('utf-8')
+            obj_data.matrix_local = list(itertools.chain.from_iterable(obj_orig.matrix_local)) # flatten matrix_local
+            obj_data.parent = None
+            obj_infos.append([obj_orig, obj_data])
         
+        # set parent
         export_objs = []
-        for obj, obj_data in obj_datas:
-            if obj.parent is None:
-                export_objs.append(obj_data)
-            else:
-                parent_obj = obj.parent
-                parent_obj_data = [obj_data for obj_data in obj_datas if obj_data[0] == parent_obj][0][1]
+        for obj_orig, obj_data in obj_infos:
+            if obj_orig.parent is not None:
+                parent_obj = obj_orig.parent
+                for parent_obj_orig, parent_obj_data in obj_infos:
+                    if parent_obj_orig == parent_obj:
+                        obj_data.parent = parent_obj_data.pointer()
+                        break
+            export_objs.append(obj_data)
         
+        return export_objs

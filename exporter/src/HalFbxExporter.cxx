@@ -1,12 +1,16 @@
 // Copyright 2023 HALBY
 // This program is distributed under the terms of the MIT License. See the file LICENSE for details.
 
+#include <iostream>
 #include "HalFbxExporter.h"
 
 static bool gVerbose = true;
 
-DLLEXPORT int __stdcall ExportFbx(char* pFilePath)
+int ExportFbx(char* pFilePath, ExportData* pExportData)
 {
+    std::cout << "pFilePath: " << pFilePath << std::endl;
+    return 0;
+
     FbxManager* lSdkManager = NULL;
     FbxScene* lScene = NULL;
     bool lResult;
