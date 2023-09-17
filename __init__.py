@@ -1,1 +1,1 @@
-import blender_plugin
+import scripts
