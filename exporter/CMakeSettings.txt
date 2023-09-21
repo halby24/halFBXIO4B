@@ -11,7 +11,6 @@
 # ===================================================================================
 
 STRING(REGEX REPLACE "/[^/]*$" "" FBX_CMAKE_ROOT "${CMAKE_CURRENT_LIST_FILE}")
-# GET_FILENAME_COMPONENT(FBX_ROOT  "${FBX_CMAKE_ROOT}/.." ABSOLUTE)
 STRING(REGEX MATCH "[^/]+$" FBX_CMAKE_OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}")
 
 SET(FBX_CMAKELIST_DEPENDENT)
@@ -30,7 +29,7 @@ ENDIF()
 #
 # ===================================================================================
 
-MACRO(SET_SAMPLES_GLOBAL_FLAGS)
+MACRO(SET_GLOBAL_FLAGS)
     SET(FBX_TMP_TARGET_LIBS ${FBX_REQUIRED_LIBS_DEPENDENCY})
     IF(NOT WIN32)
         SET(FBX_TMP_TARGET_LIBS ${FBX_TMP_TARGET_LIBS} dl pthread)
@@ -50,7 +49,6 @@ MACRO(SET_SAMPLES_GLOBAL_FLAGS)
     ENDIF(NOT WIN32)
 
     INCLUDE_DIRECTORIES(BEFORE "${FBX_ROOT}/include")
-    # INCLUDE_DIRECTORIES(AFTER "${FBX_CMAKE_ROOT}/Common")
 
     IF(WIN32)
         SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W4 ${FBX_CC_RTLd}")
@@ -101,7 +99,7 @@ MACRO(SET_SAMPLES_GLOBAL_FLAGS)
 
     TARGET_LINK_LIBRARIES(${FBX_TARGET_NAME} ${FBX_TMP_TARGET_LIBS})
     SET(FBX_TMP_TARGET_LIBS)
-ENDMACRO(SET_SAMPLES_GLOBAL_FLAGS)
+ENDMACRO(SET_GLOBAL_FLAGS)
 
 
 MACRO(FBX_PROJECT project subdir)
@@ -145,6 +143,7 @@ ENDMACRO(FBX_PROJECT project subdir)
 # COMMON SECTION
 #
 # ===================================================================================
+
 
 SET(FBX_SHARED)         # can be set at command line with -DFBX_SHARED=1
 SET(FBX_STATIC_RTL)     # can be set at command line with -DFBX_STATIC_RTL=1 (use static MSVCRT (/MT), otherwise use dynamic MSVCRT (/MD))
@@ -215,7 +214,7 @@ IF(WIN32)
             SET(FBX_CC_RTL "/MD")
             SET(FBX_CC_RTLd "/MDd")
             SET(FBX_RTL_SUFFX "-md")
-        ENDIF()        
+        ENDIF()
         SET(FBX_REQUIRED_LIBS_DEPENDENCY 
             ${FBX_TARGET_LIBS_PATH}/libfbxsdk${FBX_RTL_SUFFX}${LIB_EXTENSION} 
             ${FBX_TARGET_LIBS_PATH}/libxml2${FBX_RTL_SUFFX}${LIB_EXTENSION} 
