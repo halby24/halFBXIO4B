@@ -10,14 +10,13 @@ bl_info = {
     "category": "Import-Export",
     "location": "File > Import-Export",
     "warning" : "",
+    "support" : "TESTING",
 }
 
-from . import auto_load
-
-auto_load.init()
+from . import fbx_exporter
 
 def register():
-    auto_load.register()
+    fbx_exporter.register()
 
 def unregister():
-    auto_load.unregister()
+    fbx_exporter.unregister()

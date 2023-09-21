@@ -7,8 +7,7 @@ import bpy
 import bpy_extras
 from bpy.props import StringProperty, EnumProperty
 from .i18n import fbx_exporter_dict
-from .construct_export_object import ConstructExportObject
-from .c_data_structure import ExportData
+from .export_service import ExportService
 
 class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     """This appears in the tooltip of the operator and in the generated docs"""
@@ -16,7 +15,7 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
     bl_label = "HalFbxExporter"
     bl_options = {'UNDO', 'PRESET'}
 
-    fbxlib = ctypes.cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), "..", "bin", "HalFbxExporter." + ("dll" if os.name == "nt" else "so")))
+    export_service = ExportService()
 
     # ExportHelper mixin class uses this
     filename_ext = ".fbx"
@@ -48,17 +47,10 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
         box.prop(self, "save_format")
 
     def execute(self, context):
-        filepath = bpy.path.ensure_ext(self.filepath, self.filename_ext)
-
-        export_objects = bpy.context.selected_objects
-        
-        objConstructor = ConstructExportObject(export_objects)
-        export_data = objConstructor.getExportData()
-
-        export_fbx = self.fbxlib.ExportFbx
-        export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
-        export_fbx.restype = ctypes.c_int
-        result = export_fbx(filepath.encode('utf-8'), export_data.pointer())
+        objs = context.selected_objects
+        filepath = self.filepath
+        ext = self.filename_ext
+        self.export_service.export(objs, filepath, ext)
 
         return {'FINISHED'}
 

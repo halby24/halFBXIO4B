@@ -8,15 +8,14 @@
             "name": "Export Debug",
             "type": "python",
             "request": "launch",
-            "program": "c:/Program Files/Blender Foundation/Blender 3.6/blender.exe",
+            "program": "scripts/test/export_prims.py",
             "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
             "justMyCode": true,
-            "args": [
-                "--background",
-                "--python",
-                "${workspaceFolder}/launch.py"
-            ],
-            "envFile": "${workspaceFolder}/.vscode/.env"
+            "args": [],
+            "env": {
+                "PYTHONPATH": "${PYTHONPATH};C:\\Program Files\\Blender Foundation\\Blender 3.6\\3.6\\scripts\\modules"
+            },
         }
     ]
 }
