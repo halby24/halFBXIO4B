@@ -1,6 +1,3 @@
-set(FBX_SHARED)
-set(FBX_STATIC_RTL)
-
 if(NOT DEFINED FBXSDK_VERSION)
     set(FBXSDK_VERSION "2020.3.4")
 endif()
@@ -10,13 +7,6 @@ endif()
 if(APPLE AND NOT DEFINED FBXSDK_ROOT)
     set(FBXSDK_ROOT "/Applications/Autodesk/FBX SDK/${FBXSDK_VERSION}")
 endif()
-
-if(WIN32)
-    set(LIB_EXT ".lib")
-else()
-    set(LIB_EXT "")
-endif()
-set(FBXSDK_LIB "libfbxsdk${LIB_EXT}")
 
 set(ARCH "x64")
 if(CMAKE_SYSTEM_PROCESSOR)
@@ -42,7 +32,7 @@ find_path(FBXSDK_INCLUDE_DIR fbxsdk.h
 
 find_library(FBXSDK_LIBRARY
     NAMES
-        ${FBXSDK_LIB}
+        libfbxsdk
     PATHS
         ENV FBXSDK_ROOT
         ENV FBXSDK_LIB_DIR
@@ -53,7 +43,6 @@ find_library(FBXSDK_LIBRARY
     PATH_SUFFIXES
         ${FBXSDK_LIB_SUFFIX}
 )
-MESSAGE(${FBXSDK_LIB_SUFFIX})
 mark_as_advanced(
   FBXSDK_INCLUDE_DIR
   FBXSDK_LIBRARY
@@ -74,3 +63,5 @@ if(FBXSDK_FOUND AND NOT TARGET FBXSDK::FBXSDK)
     INTERFACE_INCLUDE_DIRECTORIES "${FBXSDK_INCLUDE_DIR}"
 )
 endif()
+
+add_definitions(-DFBXSDK_SHARED)
