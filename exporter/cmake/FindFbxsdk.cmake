@@ -1,3 +1,6 @@
+set(FBX_SHARED)
+set(FBX_STATIC_RTL)
+
 if(NOT DEFINED FBXSDK_VERSION)
     set(FBXSDK_VERSION "2020.3.4")
 endif()
@@ -10,22 +13,17 @@ endif()
 
 if(WIN32)
     set(LIB_EXT ".lib")
-elseif(APPLE)
-    set(LIB_EXT ".dylib")
 else()
-    set(LIB_EXT ".so")
+    set(LIB_EXT "")
 endif()
-set(FBXSDK_LIB "libfbxsdk${LIB_EXT} libxml${LIB_EXT} zlib${LIB_EXT}")
+set(FBXSDK_LIB "libfbxsdk${LIB_EXT}")
 
+set(ARCH "x64")
+if(CMAKE_SYSTEM_PROCESSOR)
+    set(ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
 if (WIN32)
-    IF(MSVC_VERSION GREATER 1910 AND MSVC_VERSION LESS 1920)
-        SET(FBX_COMPILER "vs2017")
-    ELSEIF(MSVC_VERSION GREATER 1919 AND MSVC_VERSION LESS 1930)
-        SET(FBX_COMPILER "vs2019")
-    ELSEIF(MSVC_VERSION GREATER 1929 AND MSVC_VERSION LESS 1940)
-        SET(FBX_COMPILER "vs2022")
-    ENDIF()
-    set(FBXSDK_LIB_SUFFIX "lib/${FBX_COMPILER}/${MSVC_TOOLSET_VERSION}/${CMAKE_BUILD_TYPE}")
+    set(FBXSDK_LIB_SUFFIX "lib/vs2022/${ARCH}/${CMAKE_BUILD_TYPE}")
 else()
     set(FBXSDK_LIB_SUFFIX "lib/${CMAKE_BUILD_TYPE}")
 endif()
@@ -44,9 +42,7 @@ find_path(FBXSDK_INCLUDE_DIR fbxsdk.h
 
 find_library(FBXSDK_LIBRARY
     NAMES
-        fbxsdk
-        xml2
-        zlib
+        ${FBXSDK_LIB}
     PATHS
         ENV FBXSDK_ROOT
         ENV FBXSDK_LIB_DIR
@@ -57,6 +53,7 @@ find_library(FBXSDK_LIBRARY
     PATH_SUFFIXES
         ${FBXSDK_LIB_SUFFIX}
 )
+MESSAGE(${FBXSDK_LIB_SUFFIX})
 mark_as_advanced(
   FBXSDK_INCLUDE_DIR
   FBXSDK_LIBRARY
