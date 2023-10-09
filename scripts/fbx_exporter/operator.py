@@ -9,9 +9,9 @@ from bpy.props import StringProperty, EnumProperty
 from .i18n import fbx_exporter_dict
 from .export_service import ExportService
 
-class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     """This appears in the tooltip of the operator and in the generated docs"""
-    bl_idname = "import_export.halfbxexp_fbx_exporter"
+    bl_idname = "import_export.hal_fbx_exporter"
     bl_label = "HalFbxExporter"
     bl_options = {'UNDO', 'PRESET'}
 
@@ -35,7 +35,7 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
             ('ascii', "ASCII", "FBX ASCII file format"),
             ('binary', "Binary", "FBX binary file format"),
         ),
-        default='BINARY',
+        default='binary',
     )
 
     def draw(self, context):
@@ -56,14 +56,14 @@ class HALFBXEXP_OT_FbxExporter(bpy.types.Operator, bpy_extras.io_utils.ExportHel
 
 
 def create_export_menu(self, context):
-    self.layout.operator(HALFBXEXP_OT_FbxExporter.bl_idname, text="HalFbxExporter (.fbx)")
+    self.layout.operator(HalFbxExpoterOperator.bl_idname, text="HalFbxExporter (.fbx)")
 
 def register():
-    bpy.utils.register_class(HALFBXEXP_OT_FbxExporter)
+    bpy.utils.register_class(HalFbxExpoterOperator)
     bpy.types.TOPBAR_MT_file_export.append(create_export_menu)
     bpy.app.translations.register(__name__, fbx_exporter_dict)
 
 def unregister():
-    bpy.utils.unregister_class(HALFBXEXP_OT_FbxExporter)
+    bpy.utils.unregister_class(HalFbxExpoterOperator)
     bpy.types.TOPBAR_MT_file_export.remove(create_export_menu)
     bpy.app.translations.unregister(__name__)
