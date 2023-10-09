@@ -1,7 +1,5 @@
 # Copyright 2023 HALBY
 # This program is distributed under the terms of the MIT License. See the file LICENSE for details.
-
-
 set(CMAKE_MIN_REQ_VERSION 3.12)
 cmake_minimum_required(VERSION ${CMAKE_MIN_REQ_VERSION})
 
