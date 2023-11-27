@@ -21,5 +21,5 @@ class ExportService:
         export_fbx = self.fbxlib.ExportFbx
         export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
         export_fbx.restype = ctypes.c_int
-        result = export_fbx(filepath.encode('utf-8'), export_data.pointer())
+        result = export_fbx(filepath.encode('utf-8'), ctypes.pointer(export_data))
         print(result)
