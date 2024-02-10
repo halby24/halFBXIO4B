@@ -1,5 +1,23 @@
 {
     "files.eol": "\n",
     "cmake.sourceDirectory": "E:/Repos/python/HalFbxExporter/exporter",
-    "C_Cpp.default.mergeConfigurations": true
+    "C_Cpp.default.mergeConfigurations": true,
+    "files.associations": {
+        "*.uxml": "xml",
+        "*.uss": "css",
+        "ssh_config": "ssh_config",
+        ".env.*": "properties",
+        "*.lilblock": "shaderlab",
+        "*.env": "properties",
+        "CmakeSettings.txt": "cmake",
+        "*.i": "swig",
+        ".secrets": "properties",
+        ".secrets.example": "properties",
+        ".vars": "properties",
+        ".vars.sample": "properties",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "type_traits": "cpp",
+        "memory": "cpp"
+    }
 }

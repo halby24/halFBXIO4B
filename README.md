@@ -8,7 +8,7 @@
   - C++のワークロード
   - CMake 3.20以上
 - FBX SDK 2020.3.4
-- Python 3.11くらい
+- Python 3.10くらい BlenderのPythonバージョンに合わせる
   - Pybind11
 
 ### 準備

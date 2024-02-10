@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.20)
 
 set(FBX_TARGET_NAME HalFbxExporter)
 set(FBX_TARGET_SOURCE
-    src/binding.h
-    src/HalFbxExporter.h
     src/HalFbxExporter.cxx
 )
 
@@ -13,7 +11,8 @@ set(FBX_SDK_PATH "" CACHE PATH "Path to the FBX SDK")
 
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
+set(PYTHON_VERSION CACHE STRING "Python version to use")
+find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 REQUIRED)
 
 set(FBX_LIB_DIR "${FBX_SDK_PATH}/lib/vs2022/x64/debug")
@@ -38,5 +37,5 @@ add_custom_command(
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:${FBX_TARGET_NAME}>
-    "${LIB_DIR}/HalFbxExporter.pyd"
+    ${LIB_DIR}
 )

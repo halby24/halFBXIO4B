@@ -60,9 +60,7 @@ def create_export_menu(self, context):
 def register():
     bpy.utils.register_class(HalFbxExpoterOperator)
     bpy.types.TOPBAR_MT_file_export.append(create_export_menu)
-    bpy.app.translations.register(__name__, fbx_exporter_dict)
 
 def unregister():
     bpy.utils.unregister_class(HalFbxExpoterOperator)
     bpy.types.TOPBAR_MT_file_export.remove(create_export_menu)
-    bpy.app.translations.unregister(__name__)

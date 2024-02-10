@@ -4,39 +4,32 @@
 import itertools
 import bpy
 from collections import namedtuple
-from .lib.HalFbxExporter import HalFbxExporter
+from .lib.HalFbxExporter import create_object_data, create_export_data, ExportData, ObjectData
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.objs = objs
     
-    def getExportData(self) -> HalFbxExporter.ExportData:
-        export_data = HalFbxExporter.ExportData()
+    def getExportData(self) -> ExportData:
         export_objs = self.getExportObjsFromBlenderObjs(self.objs)
-        export_data.objects = (HalFbxExporter.ObjectData * len(export_objs))(*export_objs)
-        export_data.object_count = len(export_objs)
+        object_data = create_object_data(
+            'root', # name
+            [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], # local matrix
+            export_objs, # children
+            [] # vertices
+        )
+        export_data = create_export_data(object_data, False)
         return export_data
 
     @staticmethod
-    def getExportObjsFromBlenderObjs(objs: list[bpy.types.Object]) -> list[HalFbxExporter.ObjectData]:
+    def getExportObjsFromBlenderObjs(objs: list[bpy.types.Object]) -> list[ObjectData]:
         # create object data
         obj_infos = []
         for obj_orig in objs:
-            obj_data = HalFbxExporter.ObjectData()
-            obj_data.name = obj_orig.name.encode('utf-8')
-            obj_data.matrix_local = list(itertools.chain.from_iterable(obj_orig.matrix_local)) # flatten matrix_local
-            obj_data.parent = None
-            obj_infos.append([obj_orig, obj_data])
-        
-        # set parent
-        export_objs = []
-        for obj_orig, obj_data in obj_infos:
-            if obj_orig.parent is not None:
-                parent_obj = obj_orig.parent
-                for parent_obj_orig, parent_obj_data in obj_infos:
-                    if parent_obj_orig == parent_obj:
-                        obj_data.parent = parent_obj_data.pointer()
-                        break
-            export_objs.append(obj_data)
-        
-        return export_objs
+            name = obj_orig.name.encode('utf-8')
+            m = obj_orig.matrix_local
+            matrix_local = [m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0], m[2][1], m[2][2], m[2][3], m[3][0], m[3][1], m[3][2], m[3][3]]
+            children = []
+            vertices = []
+            obj_infos.append(create_object_data(name, matrix_local, children, vertices))
+        return obj_infos
