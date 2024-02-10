@@ -6,7 +6,6 @@ import ctypes
 import bpy
 import bpy_extras
 from bpy.props import StringProperty, EnumProperty
-from .i18n import fbx_exporter_dict
 from .export_service import ExportService
 
 class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
@@ -29,8 +28,8 @@ class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
     save_format: EnumProperty(
-        name="Save Format",
-        description="FBX save format",
+        name="保存形式",
+        description="",
         items=(
             ('ascii', "ASCII", "FBX ASCII file format"),
             ('binary', "Binary", "FBX binary file format"),
@@ -40,10 +39,10 @@ class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Exporting fbx files with official FBX SDK.")
+        layout.label(text="FBX SDKを使用してFBXファイルをエクスポートします。")
 
         box = layout.box()
-        box.label(text="Save Format:")
+        box.label(text="保存形式:")
         box.prop(self, "save_format")
 
     def execute(self, context):

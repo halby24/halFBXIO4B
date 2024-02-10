@@ -1,10 +1,4 @@
 {
-    "python.analysis.extraPaths": [
-        "C:\\Program Files\\Blender Foundation\\Blender 3.6\\3.6\\scripts\\modules",
-    ],
-    "python.autoComplete.extraPaths": [
-        "C:\\Program Files\\Blender Foundation\\Blender 3.6\\3.6\\scripts\\modules"
-    ],
     "files.eol": "\n",
     "cmake.sourceDirectory": "E:/Repos/python/HalFbxExporter/exporter",
     "C_Cpp.default.mergeConfigurations": true

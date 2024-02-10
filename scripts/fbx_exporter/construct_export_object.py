@@ -3,26 +3,26 @@
 
 import itertools
 import bpy
-from .c_data_structure import *
 from collections import namedtuple
+from .lib.HalFbxExporter import HalFbxExporter
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.objs = objs
     
-    def getExportData(self) -> ExportData:
-        export_data = ExportData()
+    def getExportData(self) -> HalFbxExporter.ExportData:
+        export_data = HalFbxExporter.ExportData()
         export_objs = self.getExportObjsFromBlenderObjs(self.objs)
-        export_data.objects = (ObjectData * len(export_objs))(*export_objs)
+        export_data.objects = (HalFbxExporter.ObjectData * len(export_objs))(*export_objs)
         export_data.object_count = len(export_objs)
         return export_data
 
     @staticmethod
-    def getExportObjsFromBlenderObjs(objs: list[bpy.types.Object]) -> list[ObjectData]:
+    def getExportObjsFromBlenderObjs(objs: list[bpy.types.Object]) -> list[HalFbxExporter.ObjectData]:
         # create object data
         obj_infos = []
         for obj_orig in objs:
-            obj_data = ObjectData()
+            obj_data = HalFbxExporter.ObjectData()
             obj_data.name = obj_orig.name.encode('utf-8')
             obj_data.matrix_local = list(itertools.chain.from_iterable(obj_orig.matrix_local)) # flatten matrix_local
             obj_data.parent = None
