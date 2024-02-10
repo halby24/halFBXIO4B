@@ -17,4 +17,5 @@ class ExportData(ctypes.Structure):
     _fields_ = (
         ('objects', ctypes.POINTER(ObjectData)),
         ('object_count', ctypes.c_size_t),
+        ('is_ascii', ctypes.c_bool)
     )

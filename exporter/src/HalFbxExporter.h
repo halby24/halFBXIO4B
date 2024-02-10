@@ -1,14 +1,15 @@
 // Copyright 2023 HALBY
 // This program is distributed under the terms of the MIT License. See the file LICENSE for details.
-
-#ifndef HAL_FBX_EXPORTER_H
-#define HAL_FBX_EXPORTER_H
-
-#include "Common.h"
-#include "CDataStructure.h"
-
+#pragma once
 #define DLLEXPORT extern "C" __declspec(dllexport)
 
-DLLEXPORT int __stdcall ExportFbx(char* pFilePath, ExportData* pExportData);
+DLLEXPORT struct ExportData {
+    int object_count;
+    struct Object {
+        char* name;
+        double matrix_local[16];
+    } objects[100];
+    bool is_ascii;
+};
 
-#endif
+DLLEXPORT int ExportFbx(char* pFilePath, ExportData* pExportData);

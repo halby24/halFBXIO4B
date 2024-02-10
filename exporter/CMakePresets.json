@@ -1,0 +1,20 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "description": "Default configuration",
+            "cacheVariables": {
+                "FBX_SDK_PATH": "C:/Program Files/Autodesk/FBX/FBX SDK/2020.3.4"
+            },
+            "environment": {
+                "pybind11_DIR": "$env{LOCALAPPDATA}/Packages/PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0/LocalCache/local-packages/Python311/site-packages/pybind11/share/cmake/pybind11"
+            }
+        }
+    ]
+}
