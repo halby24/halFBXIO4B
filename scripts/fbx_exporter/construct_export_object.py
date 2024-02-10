@@ -1,10 +1,9 @@
 # Copyright 2023 HALBY
 # This software is released under the MIT License, see LICENSE.
 
-import itertools
 import bpy
 from collections import namedtuple
-from .lib.HalFbxExporter import create_object_data, create_export_data, ExportData, ObjectData
+from .clib import ExportData, ObjectData, create_export_data, create_object_data, destroy_export_data
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:

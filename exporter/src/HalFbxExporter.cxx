@@ -3,53 +3,17 @@
 
 #include <fbxsdk.h>
 #include <iostream>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <string>
-#include <vector>
-#include <memory>
-namespace py = pybind11;
-
-struct ObjectData
-{
-    std::string name;
-    std::array<double, 16> matrix_local;
-    std::vector<ObjectData*> children;
-    std::vector<double> vertices;
-};
-
-struct ExportData
-{
-    ObjectData* root;
-    bool is_ascii;
-};
+#include "../include/HalFbxExporter.h"
 
 FbxNode* create_node_recursive(FbxScene* scene, ObjectData* object_data);
-bool export_fbx(std::string export_path, ExportData* export_data);
-ObjectData* create_object_data(std::string name, std::array<double, 16> matrix_local, std::vector<ObjectData*> children, std::vector<double> vertices);
-ExportData* create_export_data(ObjectData* root, bool is_ascii);
-void destroy_object_data(ObjectData* object_data);
-void destroy_export_data(ExportData* export_data);
 
-PYBIND11_MODULE(HalFbxExporter, m)
-{
-    m.doc() = "Export FBX file";
-    py::class_<ObjectData>(m, "ObjectData");
-    py::class_<ExportData>(m, "ExportData");
-    m.def("create_object_data", &create_object_data, "Create ObjectData");
-    m.def("create_export_data", &create_export_data, "Create ExportData");
-    m.def("destroy_object_data", &destroy_object_data, "Destroy ObjectData");
-    m.def("destroy_export_data", &destroy_export_data, "Destroy ExportData");
-    m.def("export_fbx", &export_fbx, "Export FBX file");
-}
-
-bool export_fbx(std::string export_path, ExportData* export_data)
+bool export_fbx(char* export_path, ExportData* export_data)
 {
     auto manager = FbxManager::Create();
     auto scene = FbxScene::Create(manager, "Scene");
 
     // The example can take a FBX file as an argument.
-    FbxString path_fbxstr(export_path.c_str());
+    FbxString path_fbxstr(export_path);
 
     if (path_fbxstr.IsEmpty())
     {
@@ -72,7 +36,7 @@ bool export_fbx(std::string export_path, ExportData* export_data)
         manager->Destroy();
         return false;
     }
-    for (int i = 0; i < root->children.size(); i++) { scene->GetRootNode()->AddChild(root_node->GetChild(i)); }
+    for (int i = 0; i < root->child_count; i++) { scene->GetRootNode()->AddChild(root_node->GetChild(i)); }
 
     // バイナリまたはASCII形式の選択
     int format;
@@ -99,8 +63,7 @@ FbxNode* create_node_recursive(FbxScene* scene, ObjectData* object_data)
         return nullptr;
     }
 
-    std::cout << "Create node: " << object_data->name << std::endl;
-    auto node = FbxNode::Create(scene, object_data->name.c_str());
+    auto node = FbxNode::Create(scene, object_data->name);
 
     FbxAMatrix transform;
     for (int i = 0; i < 16; i++) { transform[i / 4][i % 4] = object_data->matrix_local[i]; }
@@ -108,38 +71,32 @@ FbxNode* create_node_recursive(FbxScene* scene, ObjectData* object_data)
     node->LclRotation.Set(FbxVector4(transform.GetR()));
     node->LclScaling.Set(FbxVector4(transform.GetS()));
 
-    if (object_data->vertices.size() > 0)
+    for (int i = 0; i < object_data->child_count; i++)
     {
-        auto mesh = FbxMesh::Create(scene, object_data->name.c_str());
-        mesh->InitControlPoints(object_data->vertices.size());
-        auto control_points = mesh->GetControlPoints();
-        memccpy(control_points, object_data->vertices.data(), object_data->vertices.size(), sizeof(double));
-        node->SetNodeAttribute(mesh);
-    }
-
-    for (auto child : object_data->children)
-    {
-        auto child_node = create_node_recursive(scene, child);
+        auto child_node = create_node_recursive(scene, &object_data->children[i]);
         node->AddChild(child_node);
     }
 
     return node;
 }
 
-ObjectData* create_object_data(std::string name, std::array<double, 16> matrix_local, std::vector<ObjectData*> children, std::vector<double> vertices)
+ObjectData* create_object_data(char* name, size_t name_length, double* matrix_local, ObjectData* children, size_t child_count, double* vertices, size_t vertex_count)
 {
     auto object_data = new ObjectData();
     object_data->name = name;
-    object_data->matrix_local = matrix_local;
+    object_data->name_length = name_length;
+    for (int i = 0; i < 16; i++) { object_data->matrix_local[i] = matrix_local[i]; }
     object_data->children = children;
+    object_data->child_count = child_count;
     object_data->vertices = vertices;
+    object_data->vertex_count = vertex_count;
     return object_data;
 }
 
 ExportData* create_export_data(ObjectData* root, bool is_ascii)
 {
     auto export_data = new ExportData();
-    export_data->root = std::move(root);
+    export_data->root = root;
     export_data->is_ascii = is_ascii;
     return export_data;
 }
@@ -147,7 +104,7 @@ ExportData* create_export_data(ObjectData* root, bool is_ascii)
 void destroy_object_data(ObjectData* object_data)
 {
     if (object_data == nullptr) return; 
-    for (auto& child : object_data->children) destroy_object_data(child);
+    for (int i = 0; i < object_data->child_count; i++) destroy_object_data(&object_data->children[i]);
     delete object_data;
 }
 

@@ -6,7 +6,7 @@ import ctypes
 import bpy
 import bpy_extras
 from bpy.props import StringProperty, EnumProperty
-from .export_service import ExportService
+from .expoter import Exporter
 
 class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     """This appears in the tooltip of the operator and in the generated docs"""
@@ -14,7 +14,7 @@ class HalFbxExpoterOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper
     bl_label = "HalFbxExporter"
     bl_options = {'UNDO', 'PRESET'}
 
-    export_service = ExportService()
+    export_service = Exporter()
 
     # ExportHelper mixin class uses this
     filename_ext = ".fbx"

@@ -3,9 +3,8 @@
 
 import bpy
 from .construct_export_object import ConstructExportObject
-from .lib.HalFbxExporter import export_fbx, destroy_export_data
 
-class ExportService:
+class Exporter:
     def export(self, objs: list[bpy.types.Object], filepath: str, ext: str):
         filepath = bpy.path.ensure_ext(filepath, ext)
 

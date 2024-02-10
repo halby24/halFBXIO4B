@@ -2,7 +2,7 @@
 # This software is released under the MIT License, see LICENSE.
 
 import bpy
-from ..fbx_exporter.export_service import ExportService
+from ..fbx_exporter.expoter import Exporter
 
 # add primitives
 cube = bpy.ops.mesh.primitive_cube_add()
@@ -16,5 +16,5 @@ bpy.context.object.location = (2, 0, 0)
 objs = [cube, ico_sphere]
 
 # export fbx
-export_service = ExportService()
+export_service = Exporter()
 export_service.export(objs, "test.fbx", ".fbx")
