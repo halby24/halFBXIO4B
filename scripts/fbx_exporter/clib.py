@@ -13,13 +13,14 @@ ObjectData._fields_ = [
     ('children', ctypes.POINTER(ObjectData)),
     ('child_count', ctypes.c_size_t),
     ('vertices', ctypes.POINTER(ctypes.c_double)),
-    ('vertex_count', ctypes.c_size_t)
+    ('vertex_count', ctypes.c_size_t),
 ]
 
 class ExportData(ctypes.Structure):
     _fields_ = [
         ('root', ctypes.POINTER(ObjectData)),
-        ('is_binary', ctypes.c_bool)
+        ('is_binary', ctypes.c_bool),
+        ('unit_scale', ctypes.c_double),
     ]
     def __repr__(self):
         fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
@@ -38,8 +39,10 @@ class CLib(Singleton):
         return self.__lib.export_fbx(filepath.encode('utf-8'), export_data)
     
     def createObjectData(self, name: str, local_matrix: list[float], children: list[ObjectData], vertices: list[float]) -> ObjectData:
-        children_ptr = ctypes.cast(ctypes.pointer((ObjectData * len(children))(*children)), ctypes.POINTER(ObjectData))
-        vertices_ptr = ctypes.cast(ctypes.pointer((ctypes.c_double * len(vertices))(*vertices)), ctypes.POINTER(ctypes.c_double))
+        children_array_ptr = ctypes.pointer((ObjectData * len(children))(*children))
+        children_ptr = ctypes.cast(children_array_ptr, ctypes.POINTER(ObjectData))
+        vertices_array_ptr = ctypes.pointer((ctypes.c_double * len(vertices))(*vertices))
+        vertices_ptr = ctypes.cast(vertices_array_ptr, ctypes.POINTER(ctypes.c_double))
         return ObjectData(
             name=name.encode('utf-8'),
             name_length=len(name),
@@ -50,9 +53,9 @@ class CLib(Singleton):
             vertex_count=len(vertices)
         )
     
-    def createExportData(self, root: ObjectData, is_binary: bool) -> ctypes.POINTER:
-        root_ptr = ctypes.pointer(root)
+    def createExportData(self, root: ObjectData, is_binary: bool, unit_scale: float) -> ctypes.POINTER:
         return ExportData(
-            root=root_ptr,
-            is_binary=is_binary
+            root=ctypes.pointer(root),
+            is_binary=is_binary,
+            unit_scale=unit_scale
         )

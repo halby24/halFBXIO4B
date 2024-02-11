@@ -16,6 +16,6 @@ class Exporter:
 
         eo = ConstructExportObject(objs)
         data = eo.getExportData()
-        self.__clib.export_fbx(filepath, data)
+        result = self.__clib.export_fbx(filepath, data)
 
-        print('aaa')
+        print(result)
