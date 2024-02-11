@@ -29,7 +29,7 @@ bool export_fbx(char* export_path, ExportData* export_data)
     path_fbxstr = path_char;
 
     // Add objects to the scene.
-    auto& root = export_data->root;
+    auto root = export_data->root;
     auto root_node = create_node_recursive(scene, root);
     if (root_node == nullptr) {
         FBXSDK_printf("Root node is null.\n");
@@ -53,6 +53,10 @@ bool export_fbx(char* export_path, ExportData* export_data)
         return false;
     }
 
+    exporter->Export(scene);
+    manager->Destroy();
+
+    std::cerr << "Exported to " << path_fbxstr.Buffer() << std::endl;
     return true;
 }
 
@@ -78,39 +82,4 @@ FbxNode* create_node_recursive(FbxScene* scene, ObjectData* object_data)
     }
 
     return node;
-}
-
-ObjectData* create_object_data(char* name, size_t name_length, double* matrix_local, ObjectData* children, size_t child_count, double* vertices, size_t vertex_count)
-{
-    auto object_data = new ObjectData();
-    object_data->name = name;
-    object_data->name_length = name_length;
-    for (int i = 0; i < 16; i++) { object_data->matrix_local[i] = matrix_local[i]; }
-    object_data->children = children;
-    object_data->child_count = child_count;
-    object_data->vertices = vertices;
-    object_data->vertex_count = vertex_count;
-    return object_data;
-}
-
-ExportData* create_export_data(ObjectData* root, bool is_ascii)
-{
-    auto export_data = new ExportData();
-    export_data->root = root;
-    export_data->is_ascii = is_ascii;
-    return export_data;
-}
-
-void destroy_object_data(ObjectData* object_data)
-{
-    if (object_data == nullptr) return; 
-    for (int i = 0; i < object_data->child_count; i++) destroy_object_data(&object_data->children[i]);
-    delete object_data;
-}
-
-void destroy_export_data(ExportData* export_data)
-{
-    if (export_data == nullptr) return;
-    destroy_object_data(export_data->root);
-    delete export_data;
 }

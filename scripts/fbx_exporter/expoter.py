@@ -4,6 +4,7 @@
 import bpy
 from .construct_export_object import ConstructExportObject
 from .clib import CLib
+import pprint
 
 class Exporter:
     def __init__(self) -> None:
@@ -15,7 +16,6 @@ class Exporter:
 
         eo = ConstructExportObject(objs)
         data = eo.getExportData()
-        result = self.__clib.export_fbx(filepath, data)
-        self.__clib.destroy_export_data(data)
+        self.__clib.export_fbx(filepath, data)
 
-        # print(result)
+        print('aaa')

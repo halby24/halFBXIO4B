@@ -3,7 +3,9 @@ import ctypes
 from .util import Singleton
 
 class ObjectData(ctypes.Structure):
-    pass
+    def __repr__(self):
+        fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
+        return f"{self.__class__.__name__}({fields})"
 ObjectData._fields_ = [
     ('name', ctypes.c_char_p),
     ('name_length', ctypes.c_size_t),
@@ -19,6 +21,9 @@ class ExportData(ctypes.Structure):
         ('root', ctypes.POINTER(ObjectData)),
         ('is_binary', ctypes.c_bool)
     ]
+    def __repr__(self):
+        fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
+        return f"{self.__class__.__name__}({fields})"
 
 class CLib(Singleton):
     def __init__(self) -> None:
@@ -26,14 +31,8 @@ class CLib(Singleton):
         self.__init_functions()
     
     def __init_functions(self):
-        self.__lib.create_object_data.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ObjectData), ctypes.c_size_t, ctypes.POINTER(ctypes.c_double), ctypes.c_size_t]
-        self.__lib.create_object_data.restype = ctypes.POINTER(ObjectData)
-        self.__lib.create_export_data.argtypes = [ctypes.POINTER(ObjectData), ctypes.c_bool]
-        self.__lib.create_export_data.restype = ctypes.POINTER(ExportData)
-        self.__lib.destroy_export_data.argtypes = [ctypes.POINTER(ExportData)]
-        self.__lib.destroy_export_data.restype = None
         self.__lib.export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
-        self.__lib.export_fbx.restype = ctypes.c_char_p
+        self.__lib.export_fbx.restype = ctypes.c_bool
     
     def export_fbx(self, filepath: str, export_data: ctypes.POINTER) -> str:
         return self.__lib.export_fbx(filepath.encode('utf-8'), export_data)
@@ -41,8 +40,6 @@ class CLib(Singleton):
     def createObjectData(self, name: str, local_matrix: list[float], children: list[ObjectData], vertices: list[float]) -> ObjectData:
         children_ptr = ctypes.cast(ctypes.pointer((ObjectData * len(children))(*children)), ctypes.POINTER(ObjectData))
         vertices_ptr = ctypes.cast(ctypes.pointer((ctypes.c_double * len(vertices))(*vertices)), ctypes.POINTER(ctypes.c_double))
-        print('children_ptr: ', children_ptr)
-        print('vertices_ptr: ', vertices_ptr)
         return ObjectData(
             name=name.encode('utf-8'),
             name_length=len(name),
@@ -59,6 +56,3 @@ class CLib(Singleton):
             root=root_ptr,
             is_binary=is_binary
         )
-    
-    def destroy_export_data(self, export_data: ctypes.POINTER) -> None:
-        self.__lib.destroy_export_data(export_data)
