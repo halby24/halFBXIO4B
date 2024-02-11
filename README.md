@@ -1,5 +1,7 @@
 # HalFbxExporter
 
+Work in progress.
+
 ## ビルド環境構築
 
 ### 入れるもの
@@ -8,10 +10,7 @@
   - C++のワークロード
   - CMake 3.20以上
 - FBX SDK 2020.3.4
-- Python 3.10くらい BlenderのPythonバージョンに合わせる
-  - Pybind11
 
 ### 準備
 
 - FBX SDKのインストール先をキャッシュ変数FBX_SDK_PATHに設定する
-- Pybind11のpybind11Config.cmakeのあるディレクトリを環境変数pybind11_DIRに設定する

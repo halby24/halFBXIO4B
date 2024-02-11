@@ -4,6 +4,20 @@
 
 extern "C"
 {
+    struct FaceData
+    {
+        unsigned int* indices;
+        size_t index_count;
+    };
+
+    struct MeshData
+    {
+        double* vertices;
+        size_t vertex_count;
+        FaceData* faces;
+        size_t face_count;
+    };
+
     struct ObjectData
     {
         char* name;
@@ -11,8 +25,7 @@ extern "C"
         double matrix_local[16];
         ObjectData* children;
         size_t child_count;
-        double* vertices;
-        size_t vertex_count;
+        MeshData* mesh;
     };
 
     struct ExportData

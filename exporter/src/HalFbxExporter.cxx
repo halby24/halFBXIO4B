@@ -9,7 +9,7 @@
 #include <math.h>
 
 FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectData* object_data);
-void fix_coord(double unit_scale, FbxVector4* vertices, size_t vertex_count);
+void fix_coord(double unit_scale, double* vertices, size_t vertex_count);
 
 bool export_fbx(char* export_path, ExportData* export_data)
 {
@@ -80,16 +80,29 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
     node->LclRotation.Set(FbxVector4(transform.GetR()));
     node->LclScaling.Set(FbxVector4(transform.GetS()));
 
-    if (object_data->vertex_count > 0)
+    if (object_data->mesh != nullptr)
     {
+        auto mesh_data = object_data->mesh;
         auto mesh = FbxMesh::Create(scene, object_data->name);
         node->SetNodeAttribute(mesh);
 
-        mesh->InitControlPoints(object_data->vertex_count);
+        mesh->InitControlPoints(mesh_data->vertex_count);
         auto control_points = mesh->GetControlPoints();
 
-        fix_coord(export_data->unit_scale, (FbxVector4*)object_data->vertices, object_data->vertex_count / 4);
-        std::memcpy(control_points, object_data->vertices, object_data->vertex_count * sizeof(double));
+        fix_coord(export_data->unit_scale, mesh_data->vertices, mesh_data->vertex_count);
+        std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(double));
+
+        if (mesh_data->faces != nullptr)
+        {
+            auto polygon_vertex_index = 0;
+            for (int i = 0; i < mesh_data->face_count; i++)
+            {
+                auto face = &mesh_data->faces[i];
+                mesh->BeginPolygon();
+                for (int j = 0; j < face->index_count; j++) mesh->AddPolygon(face->indices[j]);
+                mesh->EndPolygon();
+            }
+        }
     }
 
     for (int i = 0; i < object_data->child_count; i++)
@@ -101,17 +114,16 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
     return node;
 }
 
-void fix_coord(double unit_scale, FbxVector4* vertices, size_t vertex_count)
+void fix_coord(double unit_scale, double* vertices, size_t vertex_count)
 {
     auto cm_scale = unit_scale * 100.0;
+    auto vecs = (FbxVector4*)vertices;
+    auto vec_count = vertex_count / 4;
 
     FbxAMatrix m;
     m.SetIdentity();
     auto rad = cos(M_PI / 4.0);
     m.SetQ(FbxQuaternion(rad, 0, 0, rad)); // Z-up to Y-up
     m.SetS(FbxVector4(cm_scale, cm_scale, cm_scale));
-    for (size_t i = 0; i < vertex_count; i++)
-    {
-        vertices[i] = m.MultT(vertices[i]);
-    }
+    for (size_t i = 0; i < vec_count; i++) { vecs[i] = m.MultT(vecs[i]); }
 }
