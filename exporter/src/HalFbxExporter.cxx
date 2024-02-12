@@ -7,9 +7,10 @@
 #include <iostream>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <vector>
 
 FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectData* object_data);
-void fix_coord(double unit_scale, double* vertices, size_t vertex_count);
+void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
 
 bool export_fbx(char* export_path, ExportData* export_data)
 {
@@ -89,20 +90,27 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
         mesh->InitControlPoints(mesh_data->vertex_count);
         auto control_points = mesh->GetControlPoints();
 
+        // メッシュの頂点座標を設定、Z-up to Y-up
         fix_coord(export_data->unit_scale, mesh_data->vertices, mesh_data->vertex_count);
-        std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(double));
+        std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(Vector4));
 
-        if (mesh_data->faces != nullptr)
+        auto polygon_vertex_index = 0;
+        for (int i = 0; i < mesh_data->poly_count; i++)
         {
-            auto polygon_vertex_index = 0;
-            for (int i = 0; i < mesh_data->face_count; i++)
-            {
-                auto face = &mesh_data->faces[i];
-                mesh->BeginPolygon();
-                for (int j = 0; j < face->index_count; j++) mesh->AddPolygon(face->indices[j]);
-                mesh->EndPolygon();
-            }
+            auto curr_index = mesh_data->polys[i];
+            auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
+
+            mesh->BeginPolygon();
+            for (int j = curr_index; j < next_index; j++) mesh->AddPolygon(mesh_data->indices[j]);
+            mesh->EndPolygon();
         }
+
+        auto enrm = mesh->CreateElementNormal();
+        enrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+        enrm->SetReferenceMode(FbxGeometryElement::eDirect);
+        auto normals_array = enrm->GetDirectArray();
+        normals_array.Resize(mesh_data->vertex_count);
+        std::memcpy(&normals_array.GetFirst(), mesh_data->normals, mesh_data->vertex_count * sizeof(Vector4));
     }
 
     for (int i = 0; i < object_data->child_count; i++)
@@ -114,16 +122,30 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
     return node;
 }
 
-void fix_coord(double unit_scale, double* vertices, size_t vertex_count)
+void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
 {
     auto cm_scale = unit_scale * 100.0;
     auto vecs = (FbxVector4*)vertices;
-    auto vec_count = vertex_count / 4;
 
     FbxAMatrix m;
     m.SetIdentity();
     auto rad = cos(M_PI / 4.0);
     m.SetQ(FbxQuaternion(rad, 0, 0, rad)); // Z-up to Y-up
     m.SetS(FbxVector4(cm_scale, cm_scale, cm_scale));
-    for (size_t i = 0; i < vec_count; i++) { vecs[i] = m.MultT(vecs[i]); }
+    for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
+}
+
+void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)
+{
+    std::vector<FbxVector4> vertex_normals;
+    vertex_normals.resize(index_count / 4);
+    for (size_t i = 0; i < poly_count; i++)
+    {
+        auto curr_index = polys[i];
+        auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
+        auto normal = (FbxVector4*)&poly_normals[i * 4];
+        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[indices[j]] += *normal; }
+    }
+    for (size_t i = 0; i < vertex_normals.size(); i++) { vertex_normals[i].Normalize(); }
+    std::memcpy(out_vertex_normals, &vertex_normals[0], vertex_normals.size() * sizeof(FbxVector4));
 }

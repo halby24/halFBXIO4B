@@ -3,7 +3,7 @@
 
 import bpy
 from collections import namedtuple
-from .clib import ExportData, ObjectData, CLib
+from .clib import ExportData, ObjectData, CLib, Vector2, Vector4
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
@@ -34,16 +34,21 @@ class ConstructExportObject:
             mesh_data = None
             if obj_orig.type == 'MESH':
                 mesh = obj_orig.data
+                normals = []
+                if len(mesh.corner_normals) > 0:
+                    for corner_normal in mesh.corner_normals:
+                        normals.append(Vector4(corner_normal.x, corner_normal.y, corner_normal.z, 1))
+                elif len(mesh.polygon_normals) > 0:
+                    vertex_normals = self.__clib.vertex_normal_from_poly_normal(mesh.loops, mesh.polygons, mesh.polygon_normals)
+                    for vertex_normal in vertex_normals:
+                        normals.append(Vector4(vertex_normal.x, vertex_normal.y, vertex_normal.z, 1))
                 vertices = []
                 for vertex in mesh.vertices:
-                    vertices.append(vertex.co.x)
-                    vertices.append(vertex.co.y)
-                    vertices.append(vertex.co.z)
-                    vertices.append(1)
+                    vertices.append(Vector4(vertex.co.x, vertex.co.y, vertex.co.z, 1))
                 faces = []
                 for face in mesh.polygons:
                     face_data = self.__clib.createFaceData(face.vertices)
                     faces.append(face_data)
-                mesh_data = self.__clib.createMeshData(vertices, faces) 
+                mesh_data = self.__clib.createMeshData(vertices, faces)
             obj_infos.append(self.__clib.createObjectData(name, matrix_local, children, mesh_data))
         return obj_infos

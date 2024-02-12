@@ -18,6 +18,7 @@
         "vector": "cpp",
         "xstring": "cpp",
         "type_traits": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "cmath": "cpp"
     }
 }
