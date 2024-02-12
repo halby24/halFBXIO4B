@@ -70,7 +70,7 @@ class CLib(Singleton):
     def __init_functions(self):
         self.__lib.export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
         self.__lib.export_fbx.restype = ctypes.c_bool
-        self.__lib.vertex_normal_from_poly_normal.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)]
+        self.__lib.vertex_normal_from_poly_normal.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(Vector4), ctypes.POINTER(Vector4)]
         self.__lib.vertex_normal_from_poly_normal.restype = None
     
     def export_fbx(self, filepath: str, export_data: ctypes.POINTER) -> str:
@@ -87,7 +87,7 @@ class CLib(Singleton):
         out_vertex_normals_array_ptr = ctypes.pointer(out_vertex_normals_array)
         out_vertex_normals_ptr = ctypes.cast(out_vertex_normals_array_ptr, ctypes.POINTER(Vector4))
         self.__lib.vertex_normal_from_poly_normal(indices_ptr, len(indices), polys_ptr, len(polys), normals_ptr, out_vertex_normals_ptr)
-        return list(out_vertex_normals_array)
+        return list(out_vertex_normals_array)              
     
     def createObjectData(self, name: str, local_matrix: list[float], children: list[ObjectData], mesh: MeshData) -> ObjectData:
         children_array_ptr = ctypes.pointer((ObjectData * len(children))(*children))

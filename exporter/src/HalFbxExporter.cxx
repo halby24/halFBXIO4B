@@ -59,8 +59,10 @@ bool export_fbx(char* export_path, ExportData* export_data)
         return false;
     }
 
+    std::cerr << "Exporting..." << std::endl;
     exporter->Export(scene);
     manager->Destroy();
+    std::cerr << "Exported." << std::endl;
 
     return true;
 }
@@ -108,9 +110,10 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
         auto enrm = mesh->CreateElementNormal();
         enrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
         enrm->SetReferenceMode(FbxGeometryElement::eDirect);
-        auto normals_array = enrm->GetDirectArray();
-        normals_array.Resize(mesh_data->vertex_count);
-        std::memcpy(&normals_array.GetFirst(), mesh_data->normals, mesh_data->vertex_count * sizeof(Vector4));
+        for (size_t i = 0; i < mesh_data->vertex_count; i++)
+        {
+            enrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[i]);
+        }
     }
 
     for (int i = 0; i < object_data->child_count; i++)
@@ -137,15 +140,14 @@ void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
 
 void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)
 {
-    std::vector<FbxVector4> vertex_normals;
-    vertex_normals.resize(index_count / 4);
+    std::vector<Vector4> vertex_normals;
+    vertex_normals.resize(index_count);
     for (size_t i = 0; i < poly_count; i++)
     {
         auto curr_index = polys[i];
         auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
-        auto normal = (FbxVector4*)&poly_normals[i * 4];
-        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[indices[j]] += *normal; }
+        auto normal = poly_normals[i];
+        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[indices[j]] = normal; }
     }
-    for (size_t i = 0; i < vertex_normals.size(); i++) { vertex_normals[i].Normalize(); }
-    std::memcpy(out_vertex_normals, &vertex_normals[0], vertex_normals.size() * sizeof(FbxVector4));
+    std::memcpy(out_vertex_normals, vertex_normals.data(), index_count * sizeof(Vector4));
 }

@@ -19,6 +19,7 @@
         "xstring": "cpp",
         "type_traits": "cpp",
         "memory": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "ostream": "cpp"
     }
 }
