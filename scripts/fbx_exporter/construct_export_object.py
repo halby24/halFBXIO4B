@@ -9,7 +9,7 @@ class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.__clib = CLib()
         self.objs = objs
-    
+
     def getExportData(self) -> ExportData:
         export_objs = self.getExportObjsFromBlenderObjs(self.objs)
         object_data = self.__clib.createObjectData(
@@ -37,10 +37,13 @@ class ConstructExportObject:
                 polys = []
                 indices = []
                 index = 0
+                print('mesh: ', mesh.name, '\nvertices: ', len(mesh.vertices), '\npolygons: ', len(mesh.polygons))
                 for polygon in mesh.polygons:
                     polys.append(index)
-                    for loop_index in polygon.loop_indices:
-                        indices.append(loop_index)
+                    print('polygon: ', index)
+                    for vert in polygon.vertices:
+                        indices.insert(0, vert)
+                        print('vert: ', vert)
                         index += 1
                 normals = []
                 if len(mesh.corner_normals) > 0:

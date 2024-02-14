@@ -2,10 +2,10 @@
 # This software is released under the MIT License, see LICENSE.
 
 bl_info = {
-    "name" : "HalFbxExporter",
+    "name" : "halFBXIO4B",
     "author" : "HALBY",
     "description" : "Export fbx files with official FBX SDK.",
-    "blender" : (3, 6, 0),
+    "blender" : (4, 0, 0),
     "version" : (0, 0, 1),
     "category": "Import-Export",
     "location": "File > Import-Export",
