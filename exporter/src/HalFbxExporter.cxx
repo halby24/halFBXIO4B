@@ -59,10 +59,8 @@ bool export_fbx(char* export_path, ExportData* export_data)
         return false;
     }
 
-    std::cerr << "Exporting..." << std::endl;
     exporter->Export(scene);
     manager->Destroy();
-    std::cerr << "Exported." << std::endl;
 
     return true;
 }
