@@ -64,18 +64,18 @@ class ExportData(ctypes.Structure):
 
 class CLib(Singleton):
     def __init__(self) -> None:
-        self.__lib = ctypes.CDLL(os.path.dirname(os.path.abspath(__file__)) + '/lib/HalFbxExporter.dll')
+        self.__lib = ctypes.CDLL(os.path.dirname(os.path.abspath(__file__)) + '/lib/halFBXIO4B.dll')
         self.__init_functions()
-    
+
     def __init_functions(self):
         self.__lib.export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
         self.__lib.export_fbx.restype = ctypes.c_bool
         self.__lib.vertex_normal_from_poly_normal.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t, ctypes.POINTER(Vector4), ctypes.POINTER(Vector4)]
         self.__lib.vertex_normal_from_poly_normal.restype = None
-    
+
     def export_fbx(self, filepath: str, export_data: ctypes.POINTER) -> str:
         return self.__lib.export_fbx(filepath.encode('utf-8'), export_data)
-    
+
     def vertex_normal_from_poly_normal(self, indices: list[int], polys: list[int], normals: list[Vector4]) -> list[Vector4]:
         indices_array_ptr = ctypes.pointer((ctypes.c_uint * len(indices))(*indices))
         indices_ptr = ctypes.cast(indices_array_ptr, ctypes.POINTER(ctypes.c_uint))
@@ -87,8 +87,8 @@ class CLib(Singleton):
         out_vertex_normals_array_ptr = ctypes.pointer(out_vertex_normals_array)
         out_vertex_normals_ptr = ctypes.cast(out_vertex_normals_array_ptr, ctypes.POINTER(Vector4))
         self.__lib.vertex_normal_from_poly_normal(indices_ptr, len(indices), polys_ptr, len(polys), normals_ptr, out_vertex_normals_ptr)
-        return list(out_vertex_normals_array)              
-    
+        return list(out_vertex_normals_array)
+
     def createObjectData(self, name: str, local_matrix: list[float], children: list[ObjectData], mesh: MeshData) -> ObjectData:
         children_array_ptr = ctypes.pointer((ObjectData * len(children))(*children))
         children_ptr = ctypes.cast(children_array_ptr, ctypes.POINTER(ObjectData))
@@ -100,14 +100,14 @@ class CLib(Singleton):
             child_count=len(children),
             mesh=ctypes.pointer(mesh) if mesh else ctypes.POINTER(MeshData)()
         )
-    
+
     def createExportData(self, root: ObjectData, is_binary: bool, unit_scale: float) -> ExportData:
         return ExportData(
             root=ctypes.pointer(root),
             is_binary=is_binary,
             unit_scale=unit_scale
         )
-    
+
     def createMeshData(self, name: str, vertices: list[Vector4], normals: list[Vector4], uvs: list[Vector2], indices: list[int], polys: list[int]) -> MeshData:
         vertices_array_ptr = ctypes.pointer((Vector4 * len(vertices))(*vertices))
         vertices_ptr = ctypes.cast(vertices_array_ptr, ctypes.POINTER(Vector4))

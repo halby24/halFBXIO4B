@@ -37,10 +37,14 @@ class ConstructExportObject:
                 polys = []
                 indices = []
                 index = 0
+                poly_index = 0
                 for polygon in mesh.polygons:
                     polys.append(index)
+                    print('polygon: ', poly_index)
+                    poly_index += 1
                     for vert in polygon.vertices:
-                        indices.insert(0, vert)
+                        indices.append(vert)
+                        print('vert: ', vert)
                         index += 1
                 normals = []
                 if len(mesh.corner_normals) > 0:
