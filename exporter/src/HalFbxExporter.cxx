@@ -9,7 +9,7 @@
 #include <math.h>
 #include <vector>
 
-FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectData* object_data);
+FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data);
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
 FbxAMatrix fix_rot_m(FbxAMatrix& input);
 FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale);
@@ -44,7 +44,7 @@ bool export_fbx(char* export_path, ExportData* export_data)
         manager->Destroy();
         return false;
     }
-    for (int i = 0; i < root->child_count; i++) { scene->GetRootNode()->AddChild(root_node->GetChild(i)); }
+    for (auto i = 0; i < root->child_count; i++) { scene->GetRootNode()->AddChild(root_node->GetChild(i)); }
 
     // バイナリまたはASCII形式の選択
     int format;
@@ -67,7 +67,7 @@ bool export_fbx(char* export_path, ExportData* export_data)
     return true;
 }
 
-FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectData* object_data)
+FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data)
 {
     if (object_data == nullptr)
     {
@@ -118,7 +118,7 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
         }
     }
 
-    for (int i = 0; i < object_data->child_count; i++)
+    for (auto i = 0; i < object_data->child_count; i++)
     {
         auto child_node = create_node_recursive(scene, export_data, &object_data->children[i]);
         node->AddChild(child_node);
@@ -131,7 +131,7 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
 {
     std::vector<Vector4> vertex_normals;
     vertex_normals.resize(index_count);
-    for (size_t i = 0; i < poly_count; i++)
+    for (auto i = 0; i < poly_count; i++)
     {
         auto curr_index = polys[i];
         auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
@@ -140,9 +140,9 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
         m.SetIdentity();
         m = fix_rot_m(m);
         normal = *(Vector4*)&m.MultT(*(FbxVector4*)&normal);
-        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[j] = normal; }
+        for (auto j = curr_index; j < next_index; j++) { vertex_normals[j] = normal; }
     }
-    for (size_t i = 0; i < index_count; i++) { out_vertex_normals[i] = vertex_normals[i]; }
+    for (auto i = 0; i < index_count; i++) { out_vertex_normals[i] = vertex_normals[i]; }
 }
 
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)

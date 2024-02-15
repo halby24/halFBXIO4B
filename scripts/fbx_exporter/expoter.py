@@ -4,7 +4,6 @@
 import bpy
 from .construct_export_object import ConstructExportObject
 from .clib import CLib
-import pprint
 
 class Exporter:
     def __init__(self) -> None:
