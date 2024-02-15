@@ -108,10 +108,7 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
         auto enrm = mesh->CreateElementNormal();
         enrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
         enrm->SetReferenceMode(FbxGeometryElement::eDirect);
-        for (size_t i = 0; i < mesh_data->vertex_count; i++)
-        {
-            enrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[i]);
-        }
+        for (size_t i = 0; i < mesh_data->vertex_count; i++) { enrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[i]); }
     }
 
     for (int i = 0; i < object_data->child_count; i++)
@@ -148,4 +145,5 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
         for (size_t j = curr_index; j < next_index; j++) { vertex_normals[indices[j]] = normal; }
     }
     std::memcpy(out_vertex_normals, vertex_normals.data(), index_count * sizeof(Vector4));
+    for (size_t i = 0; i < index_count; i++) { std::cerr << "vertex_normals[" << i << "]: " << vertex_normals[i].x << ", " << vertex_normals[i].y << ", " << vertex_normals[i].z << std::endl; }
 }
