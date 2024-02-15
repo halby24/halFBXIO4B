@@ -1,6 +1,6 @@
 {
     "files.eol": "\n",
-    "cmake.sourceDirectory": "D:/repos/python/halFBXIO4B/exporter",
+    "cmake.sourceDirectory": "E:/Repos/python/halFBXIO4B/exporter",
     "C_Cpp.default.mergeConfigurations": true,
     "files.associations": {
         "*.uxml": "xml",

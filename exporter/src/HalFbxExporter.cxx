@@ -142,7 +142,11 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
         auto curr_index = polys[i];
         auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
         auto normal = poly_normals[i];
-        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[indices[j]] = normal; }
+        std::cerr << "poly_normal " << i << ": " << normal.x << ", " << normal.y << ", " << normal.z << std::endl;
+        for (size_t j = curr_index; j < next_index; j++) {
+            vertex_normals[indices[j]] = normal;
+            std::cerr << "vertex_normal " << indices[j] << ": " << vertex_normals[indices[j]].x << ", " << vertex_normals[indices[j]].y << ", " << vertex_normals[indices[j]].z << std::endl;
+        }
     }
     std::memcpy(out_vertex_normals, vertex_normals.data(), index_count * sizeof(Vector4));
     for (size_t i = 0; i < index_count; i++) { std::cerr << "vertex_normals[" << i << "]: " << vertex_normals[i].x << ", " << vertex_normals[i].y << ", " << vertex_normals[i].z << std::endl; }
