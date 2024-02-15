@@ -11,6 +11,8 @@
 
 FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectData* object_data);
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
+FbxAMatrix fix_rot_m(FbxAMatrix& input);
+FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale);
 
 bool export_fbx(char* export_path, ExportData* export_data)
 {
@@ -94,8 +96,7 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
         fix_coord(export_data->unit_scale, mesh_data->vertices, mesh_data->vertex_count);
         std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(Vector4));
 
-        auto polygon_vertex_index = 0;
-        for (int i = 0; i < mesh_data->poly_count; i++)
+        for (auto i = 0; i < mesh_data->poly_count; i++)
         {
             auto curr_index = mesh_data->polys[i];
             auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
@@ -105,10 +106,16 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
             mesh->EndPolygon();
         }
 
-        auto enrm = mesh->CreateElementNormal();
-        enrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
-        enrm->SetReferenceMode(FbxGeometryElement::eDirect);
-        for (size_t i = 0; i < mesh_data->vertex_count; i++) { enrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[i]); }
+        auto elnrm = mesh->CreateElementNormal();
+        elnrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+        elnrm->SetReferenceMode(FbxGeometryElement::eDirect);
+        for (auto i = 0; i < mesh_data->poly_count; i++)
+        {
+            auto curr_index = mesh_data->polys[i];
+            auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
+
+            for (int j = curr_index; j < next_index; j++) elnrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[j]);
+        }
     }
 
     for (int i = 0; i < object_data->child_count; i++)
@@ -120,19 +127,6 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, ObjectD
     return node;
 }
 
-void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
-{
-    auto cm_scale = unit_scale * 100.0;
-    auto vecs = (FbxVector4*)vertices;
-
-    FbxAMatrix m;
-    m.SetIdentity();
-    auto rad = cos(M_PI / 4.0);
-    m.SetQ(FbxQuaternion(rad, 0, 0, rad)); // Z-up to Y-up
-    m.SetS(FbxVector4(cm_scale, cm_scale, cm_scale));
-    for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
-}
-
 void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)
 {
     std::vector<Vector4> vertex_normals;
@@ -142,12 +136,39 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
         auto curr_index = polys[i];
         auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
         auto normal = poly_normals[i];
-        std::cerr << "poly_normal " << i << ": " << normal.x << ", " << normal.y << ", " << normal.z << std::endl;
-        for (size_t j = curr_index; j < next_index; j++) {
-            vertex_normals[indices[j]] = normal;
-            std::cerr << "vertex_normal " << indices[j] << ": " << vertex_normals[indices[j]].x << ", " << vertex_normals[indices[j]].y << ", " << vertex_normals[indices[j]].z << std::endl;
-        }
+        FbxAMatrix m;
+        m.SetIdentity();
+        m = fix_rot_m(m);
+        normal = *(Vector4*)&m.MultT(*(FbxVector4*)&normal);
+        for (size_t j = curr_index; j < next_index; j++) { vertex_normals[j] = normal; }
     }
-    std::memcpy(out_vertex_normals, vertex_normals.data(), index_count * sizeof(Vector4));
-    for (size_t i = 0; i < index_count; i++) { std::cerr << "vertex_normals[" << i << "]: " << vertex_normals[i].x << ", " << vertex_normals[i].y << ", " << vertex_normals[i].z << std::endl; }
+    for (size_t i = 0; i < index_count; i++) { out_vertex_normals[i] = vertex_normals[i]; }
+}
+
+void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
+{
+    auto cm_scale = unit_scale * 100.0;
+    auto vecs = (FbxVector4*)vertices;
+
+    FbxAMatrix m;
+    m.SetIdentity();
+    m = fix_rot_m(m);
+    m = fix_scale_m(m, unit_scale);
+    for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
+}
+
+FbxAMatrix fix_rot_m(FbxAMatrix& input)
+{
+    FbxAMatrix m(input);
+    auto rad = cos(M_PI / 4.0);
+    m.SetQ(FbxQuaternion(rad, 0, 0, rad)); // Z-up to Y-up
+    return m;
+}
+
+FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale)
+{
+    FbxAMatrix m(input);
+    auto cm_scale = unit_scale * 100.0;
+    m.SetS(FbxVector4(cm_scale, cm_scale, cm_scale));
+    return m;
 }
