@@ -100,24 +100,22 @@ class ConstructExportObject:
         poly_index = 0
         for polygon in bmesh.polygons:
             polys.append(index)
-            print("polygon: ", poly_index)
             poly_index += 1
             for vert in polygon.vertices:
                 indices.append(vert)
-                print("vert: ", vert)
                 index += 1
 
         normals: list[Normal] = self.__createNormals(bmesh, indices, polys)
 
         uvs: list[UV] = []
         for uv_layer in bmesh.uv_layers:
+            uv = [Vector2(uv.vector.x, uv.vector.y) for uv in uv_layer.uv]
             uvs.append(
                 self.__clib.createUV(
                     uv_layer.name,
-                    [Vector2(uv.vector.x, uv.vector.y) for uv in uv_layer.uv],
+                    uv,
                 )
             )
-        pprint.pprint(uvs)
 
         vertices: list[Vector4] = []
         for vertex in bmesh.vertices:

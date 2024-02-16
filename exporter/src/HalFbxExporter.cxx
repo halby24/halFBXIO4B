@@ -130,13 +130,13 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, d
     for (auto i = 0; i < mesh_data->normal_set_count; i++)
     {
         auto elnrm = mesh->CreateElementNormal();
-        set_normal(&mesh_data->normal_sets[i], mesh_data->vertex_count, elnrm);
+        set_normal(&mesh_data->normal_sets[i], mesh_data->index_count, elnrm);
     }
 
     for (auto i = 0; i < mesh_data->uv_set_count; i++)
     {
         auto eluv = mesh->CreateElementUV(mesh_data->uv_sets[i].name);
-        set_uv(&mesh_data->uv_sets[i], mesh_data->vertex_count, eluv);
+        set_uv(&mesh_data->uv_sets[i], mesh_data->index_count, eluv);
     }
 
     return mesh;
@@ -147,7 +147,17 @@ void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* tar
     target->SetName(input->name);
     target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
     target->SetReferenceMode(FbxGeometryElement::eDirect);
-    for (auto i = 0; i < input_count; i++) target->GetDirectArray().Add(*(FbxVector4*)input[i].normal);
+
+    for (auto i = 0; i < input_count; i++)
+    {
+        auto normal = input->normal[i];
+        FbxAMatrix m;
+        m.SetIdentity();
+        m = fix_rot_m(m);
+        m = m.Inverse();
+        auto fbx_normal = m.MultT(*(FbxVector4*)&normal);
+        target->GetDirectArray().Add(fbx_normal);
+    }
 }
 
 void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target)
@@ -155,7 +165,11 @@ void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target)
     target->SetName(input->name);
     target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
     target->SetReferenceMode(FbxGeometryElement::eDirect);
-    for (auto i = 0; i < input_count; i++) target->GetDirectArray().Add(*(FbxVector2*)input[i].uv);
+    for (auto i = 0; i < input_count; i++)
+    {
+        auto uv = input->uv[i];
+        target->GetDirectArray().Add(*(FbxVector2*)&uv);
+    }
 }
 
 void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)
