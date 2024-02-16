@@ -45,7 +45,7 @@ extern "C"
         size_t vertex_count;
         unsigned int* indices;
         size_t index_count;
-        unsigned int* polys; // ポリゴン開始インデックスの配列
+        unsigned int* polys;            // ポリゴン開始インデックスの配列
         unsigned int* material_indices; // ポリゴンごとのマテリアルインデックス
         size_t poly_count;
         UV* uv_sets;
@@ -75,6 +75,8 @@ extern "C"
         size_t material_count;
     };
 
-    DLLEXPORT(bool) export_fbx(char* export_path, ExportData* export_data);
-    DLLEXPORT(void) vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals);
+    DLLEXPORT(bool) export_fbx(const char* export_path, const ExportData* export_data);
+    DLLEXPORT(void)
+    vertex_normal_from_poly_normal(const unsigned int* indices, size_t index_count, const unsigned int* polys, size_t poly_count, const Vector4* poly_normals, Vector4* out_vertex_normals);
+    DLLEXPORT(void) fix_normal_rot(Vector4* normals, size_t normal_count);
 }

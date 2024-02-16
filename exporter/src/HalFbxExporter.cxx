@@ -9,15 +9,15 @@
 #include <math.h>
 #include <vector>
 
-FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data);
+FbxNode* create_node_recursive(FbxScene* scene, const ExportData* export_data, Object* object_data);
 FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, double unit_scale);
-void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* target);
-void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target);
+void set_normal(const Normal* input, size_t input_count, FbxGeometryElementNormal* target);
+void set_uv(const UV* input, size_t input_count, FbxGeometryElementUV* target);
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
-FbxAMatrix fix_rot_m(FbxAMatrix& input);
-FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale);
+FbxAMatrix fix_rot_m(const FbxAMatrix& input);
+FbxAMatrix fix_scale_m(const FbxAMatrix& input, double unit_scale);
 
-bool export_fbx(char* export_path, ExportData* export_data)
+bool export_fbx(const char* export_path, const ExportData* export_data)
 {
     auto manager = FbxManager::Create();
     auto scene = FbxScene::Create(manager, "Scene");
@@ -27,27 +27,37 @@ bool export_fbx(char* export_path, ExportData* export_data)
 
     if (path_fbxstr.IsEmpty())
     {
-        FBXSDK_printf("File path is invalid.\n");
+        std::cerr << "File path is invalid." << std::endl;
         manager->Destroy();
         return false;
     }
 
-    FBXSDK_printf("Save path: %s\n", path_fbxstr.Buffer());
+    std::cerr << "Save path: " << path_fbxstr.Buffer() << std::endl;
 
     char* path_char = NULL;
     FbxAnsiToUTF8(path_fbxstr.Buffer(), path_char, NULL);
     path_fbxstr = path_char;
 
-    // Add objects to the scene.
+    // ノードツリーの作成
     auto root = export_data->root;
     auto root_node = create_node_recursive(scene, export_data, root);
     if (root_node == nullptr)
     {
-        FBXSDK_printf("Root node is null.\n");
+        std::cerr << "Root node is null." << std::endl;
         manager->Destroy();
         return false;
     }
     for (auto i = 0; i < root->child_count; i++) { scene->GetRootNode()->AddChild(root_node->GetChild(i)); }
+
+    // マテリアルの設定
+    for (auto i = 0; i < export_data->material_count; i++)
+    {
+        auto emat = export_data->materials[i];
+        auto fmat = FbxSurfaceLambert::Create(manager, emat.name);
+        fmat->Diffuse.Set(FbxDouble3(emat.diffuse.x, emat.diffuse.y, emat.diffuse.z));
+        fmat->Emissive.Set(FbxDouble3(emat.emissive.x, emat.emissive.y, emat.emissive.z));
+        scene->AddMaterial(fmat);
+    }
 
     // バイナリまたはASCII形式の選択
     int format;
@@ -59,7 +69,7 @@ bool export_fbx(char* export_path, ExportData* export_data)
     auto exporter = FbxExporter::Create(manager, "");
     if (!exporter->Initialize(path_fbxstr, format))
     {
-        FBXSDK_printf("An error occurred while initializing the exporter...\n");
+        std::cerr << "An error occurred while initializing the exporter..." << std::endl;
         manager->Destroy();
         return false;
     }
@@ -70,11 +80,11 @@ bool export_fbx(char* export_path, ExportData* export_data)
     return true;
 }
 
-FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data)
+FbxNode* create_node_recursive(FbxScene* scene, const ExportData* export_data, Object* object_data)
 {
     if (object_data == nullptr)
     {
-        FBXSDK_printf("ObjectData is null.\n");
+        std::cerr << "ObjectData is null." << std::endl;
         return nullptr;
     }
 
@@ -91,7 +101,7 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object*
         auto mesh = create_mesh(object_data->mesh, object_data->name, scene, export_data->unit_scale);
         if (mesh == nullptr)
         {
-            FBXSDK_printf("Mesh is null.\n");
+            std::cerr << "Mesh is null." << std::endl;
             return nullptr;
         }
         node->SetNodeAttribute(mesh);
@@ -142,7 +152,7 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, d
     return mesh;
 }
 
-void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* target)
+void set_normal(const Normal* input, size_t input_count, FbxGeometryElementNormal* target)
 {
     target->SetName(input->name);
     target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
@@ -151,16 +161,11 @@ void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* tar
     for (auto i = 0; i < input_count; i++)
     {
         auto normal = input->normal[i];
-        FbxAMatrix m;
-        m.SetIdentity();
-        m = fix_rot_m(m);
-        m = m.Inverse();
-        auto fbx_normal = m.MultT(*(FbxVector4*)&normal);
-        target->GetDirectArray().Add(fbx_normal);
+        target->GetDirectArray().Add(*(FbxVector4*)&normal);
     }
 }
 
-void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target)
+void set_uv(const UV* input, size_t input_count, FbxGeometryElementUV* target)
 {
     target->SetName(input->name);
     target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
@@ -172,7 +177,7 @@ void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target)
     }
 }
 
-void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)
+void vertex_normal_from_poly_normal(const unsigned int* indices, size_t index_count, const unsigned int* polys, size_t poly_count, const Vector4* poly_normals, Vector4* out_vertex_normals)
 {
     std::vector<Vector4> vertex_normals;
     vertex_normals.resize(index_count);
@@ -190,6 +195,14 @@ void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, u
     for (auto i = 0; i < index_count; i++) { out_vertex_normals[i] = vertex_normals[i]; }
 }
 
+void fix_normal_rot(Vector4* normals, size_t normal_count)
+{
+    FbxAMatrix m;
+    m.SetIdentity();
+    m = fix_rot_m(m);
+    for (size_t i = 0; i < normal_count; i++) { normals[i] = *(Vector4*)&m.MultT(*(FbxVector4*)&normals[i]); }
+}
+
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
 {
     auto cm_scale = unit_scale * 100.0;
@@ -202,7 +215,7 @@ void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
     for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
 }
 
-FbxAMatrix fix_rot_m(FbxAMatrix& input)
+FbxAMatrix fix_rot_m(const FbxAMatrix& input)
 {
     FbxAMatrix m(input);
     auto rad = cos(M_PI / 4.0);
@@ -210,7 +223,7 @@ FbxAMatrix fix_rot_m(FbxAMatrix& input)
     return m;
 }
 
-FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale)
+FbxAMatrix fix_scale_m(const FbxAMatrix& input, double unit_scale)
 {
     FbxAMatrix m(input);
     auto cm_scale = unit_scale * 100.0;
