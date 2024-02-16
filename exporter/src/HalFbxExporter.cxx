@@ -10,6 +10,7 @@
 #include <vector>
 
 FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data);
+FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, double unit_scale);
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
 FbxAMatrix fix_rot_m(FbxAMatrix& input);
 FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale);
@@ -85,37 +86,13 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object*
 
     if (object_data->mesh != nullptr)
     {
-        auto mesh_data = object_data->mesh;
-        auto mesh = FbxMesh::Create(scene, object_data->name);
+        auto mesh = create_mesh(object_data->mesh, object_data->name, scene, export_data->unit_scale);
+        if (mesh == nullptr)
+        {
+            FBXSDK_printf("Mesh is null.\n");
+            return nullptr;
+        }
         node->SetNodeAttribute(mesh);
-
-        mesh->InitControlPoints(mesh_data->vertex_count);
-        auto control_points = mesh->GetControlPoints();
-
-        // メッシュの頂点座標を設定、Z-up to Y-up
-        fix_coord(export_data->unit_scale, mesh_data->vertices, mesh_data->vertex_count);
-        std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(Vector4));
-
-        for (auto i = 0; i < mesh_data->poly_count; i++)
-        {
-            auto curr_index = mesh_data->polys[i];
-            auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
-
-            mesh->BeginPolygon();
-            for (int j = curr_index; j < next_index; j++) mesh->AddPolygon(mesh_data->indices[j]);
-            mesh->EndPolygon();
-        }
-
-        auto elnrm = mesh->CreateElementNormal();
-        elnrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
-        elnrm->SetReferenceMode(FbxGeometryElement::eDirect);
-        for (auto i = 0; i < mesh_data->poly_count; i++)
-        {
-            auto curr_index = mesh_data->polys[i];
-            auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
-
-            for (int j = curr_index; j < next_index; j++) elnrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[j]);
-        }
     }
 
     for (auto i = 0; i < object_data->child_count; i++)
@@ -125,6 +102,41 @@ FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object*
     }
 
     return node;
+}
+
+FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, double unit_scale)
+{
+    auto mesh = FbxMesh::Create(scene, name);
+
+    mesh->InitControlPoints(mesh_data->vertex_count);
+    auto control_points = mesh->GetControlPoints();
+
+    // メッシュの頂点座標を設定、Z-up to Y-up
+    fix_coord(unit_scale, mesh_data->vertices, mesh_data->vertex_count);
+    std::memcpy(control_points, mesh_data->vertices, mesh_data->vertex_count * sizeof(Vector4));
+
+    for (auto i = 0; i < mesh_data->poly_count; i++)
+    {
+        auto curr_index = mesh_data->polys[i];
+        auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
+
+        mesh->BeginPolygon();
+        for (int j = curr_index; j < next_index; j++) mesh->AddPolygon(mesh_data->indices[j]);
+        mesh->EndPolygon();
+    }
+
+    auto elnrm = mesh->CreateElementNormal();
+    elnrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+    elnrm->SetReferenceMode(FbxGeometryElement::eDirect);
+    for (auto i = 0; i < mesh_data->poly_count; i++)
+    {
+        auto curr_index = mesh_data->polys[i];
+        auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
+
+        for (int j = curr_index; j < next_index; j++) elnrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[j]);
+    }
+
+    return mesh;
 }
 
 void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)

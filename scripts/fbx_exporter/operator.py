@@ -53,7 +53,7 @@ class halFBXIO4BOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
 
 def create_export_menu(self, context: bpy.types.Context):
-    self.layout.operator(halFBXIO4BOperator.bl_idname, text="HalFbxExporter (.fbx)")
+    self.layout.operator(halFBXIO4BOperator.bl_idname, text="FBX Export (halFBXIO4B)")
 
 def register():
     bpy.utils.register_class(halFBXIO4BOperator)
