@@ -83,11 +83,10 @@ class ConstructExportObject:
                     bmats.append(mat)
         mats: list[Material] = []
         for bmat in bmats:
-            mats.append(Material(
-                name=bmat.name.encode('utf-8'),
-                name_length=len(bmat.name),
-                diffuse_color=Vector4(bmat.diffuse_color[0], bmat.diffuse_color[1], bmat.diffuse_color[2], 1),
-                specular_color=Vector4(bmat.specular_color[0], bmat.specular_color[1], bmat.specular_color[2], 1),
-                shininess=bmat.specular_hardness
+            mats.append(self.__clib.createMaterial(
+                name=bmat.name,
+                diffuse=Vector4(bmat.diffuse_color[0], bmat.diffuse_color[1], bmat.diffuse_color[2], 1),
+                specular=Vector4(bmat.specular_color[0], bmat.specular_color[1], bmat.specular_color[2], 1),
+                emissive=Vector4(0, 0, 0, 1)
             ))
         return mats
