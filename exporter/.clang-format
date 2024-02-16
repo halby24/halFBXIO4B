@@ -1,6 +1,7 @@
+BasedOnStyle: LLVM
 PointerAlignment: Left
 IndentWidth: 4
-ColumnLimit: 200
+# ColumnLimit: 200
 BinPackArguments: true
 BinPackParameters: true
 AlignAfterOpenBracket: Align
@@ -14,6 +15,7 @@ AlignTrailingComments: true
 AlwaysBreakAfterReturnType: None
 IndentPPDirectives: BeforeHash
 BreakBeforeBraces: Custom
+AlignEscapedNewlines: DontAlign
 BraceWrapping:
   AfterClass: true
   AfterEnum: true

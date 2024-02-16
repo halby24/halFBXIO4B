@@ -16,6 +16,7 @@ project(${FBX_TARGET_NAME})
 add_library(${FBX_TARGET_NAME} SHARED ${FBX_TARGET_SOURCE})
 target_include_directories(${FBX_TARGET_NAME} PRIVATE "${FBX_SDK_PATH}/include")
 target_link_libraries(${FBX_TARGET_NAME} PRIVATE "${FBX_LIB_DIR}/libfbxsdk.lib")
+target_compile_definitions(${FBX_TARGET_NAME} PRIVATE "FBXSDK_SHARED")
 
 set(LIB_DIR "${CMAKE_CURRENT_LIST_DIR}/../scripts/fbx_exporter/lib")
 

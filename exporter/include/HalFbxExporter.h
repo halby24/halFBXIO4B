@@ -14,13 +14,56 @@ extern "C"
         double x, y, z, w;
     };
 
+    struct StandardSurface
+    {
+        double base;
+        Vector4 base_color;
+        double emission;
+        Vector4 emission_color;
+        double specular;
+        double specular_ior;
+        Vector4 specular_color;
+        double specular_anisotropy;
+        double specular_roughness;
+        double specular_rotation;
+        double transmission;
+        double transmission_depth;
+        Vector4 transmission_color;
+        Vector4 transmission_scatter;
+        double transmission_extra_roughness;
+        double transmission_dispersion;
+        double transmission_scatter_anisotropy;
+        double sheen;
+        Vector4 sheen_color;
+        double sheen_roughness;
+        double coat;
+        Vector4 coat_affect_color;
+        double coat_normal;
+        double coat_roughness;
+        Vector4 coat_color;
+        double coat_ior;
+        double coat_affect_roughness;
+        double coat_rotation;
+        double coat_anisotropy;
+        double thin_walld;
+        double thin_film_ior;
+        double thin_film_ior;
+        double thin_film_thickness;
+        double subsurface;
+        double subsurface_scale;
+        double subsurface_anisotropy;
+        Vector4 subsurface_radius;
+        Vector4 subsurface_color;
+        double metalness;
+        Vector4 opacity;
+        double diffuse_roughness;
+    };
+
     struct Material
     {
         char* name;
         size_t name_length;
-        Vector4 diffuse;
-        Vector4 specular;
-        Vector4 emissive;
+        StandardSurface standard_surface;
     };
 
     struct UV
