@@ -3,8 +3,8 @@
 
 import bpy
 import itertools
-from .clib import ExportData, Material, Mesh, Object, CLib, Vector2, Vector4
-
+from .clib import ExportData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vector4
+import pprint
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
@@ -107,15 +107,41 @@ class ConstructExportObject:
                 print("vert: ", vert)
                 index += 1
 
-        normals: list[Vector4] = []
-        if len(bmesh.corner_normals) > 0: # 頂点法線の場合
-            for corner_normal in bmesh.corner_normals:
-                normals.append(
-                    Vector4(
-                        corner_normal.x, corner_normal.y, corner_normal.z, 1
-                    )
+        normals: list[Normal] = self.__createNormals(bmesh, indices, polys)
+
+        uvs: list[UV] = []
+        for uv_layer in bmesh.uv_layers:
+            uvs.append(
+                self.__clib.createUV(
+                    uv_layer.name,
+                    [Vector2(uv.vector.x, uv.vector.y) for uv in uv_layer.uv],
                 )
-        elif len(bmesh.polygon_normals) > 0: # 面法線の場合
+            )
+        pprint.pprint(uvs)
+
+        vertices: list[Vector4] = []
+        for vertex in bmesh.vertices:
+            vertices.append(Vector4(vertex.co.x, vertex.co.y, vertex.co.z, 1))
+
+        mesh = self.__clib.createMesh(
+            bmesh.name, vertices, normals, uvs, indices, polys
+        )
+
+        return mesh
+
+    def __createNormals(self, bmesh: bpy.types.Mesh, indices: list[int], polys: list[int]) -> list[Normal]:
+        normals: list[Normal] = []
+
+        if len(bmesh.corner_normals) > 0:  # 頂点法線の場合
+            normal_vecs: list[Vector4] = []
+            for corner_normal in bmesh.corner_normals:
+                normal_vecs.append(
+                    Vector4(corner_normal.x, corner_normal.y, corner_normal.z, 1)
+                )
+            normal = self.__clib.createNormal("Normal", normal_vecs)
+            normals.append(normal)
+
+        elif len(bmesh.polygon_normals) > 0:  # 面法線の場合
             poly_normals: list[Vector4] = []
             for polygon_normal in bmesh.polygon_normals:
                 poly_normals.append(
@@ -129,24 +155,12 @@ class ConstructExportObject:
             vertex_normals = self.__clib.vertex_normal_from_poly_normal(
                 indices, polys, poly_normals
             )
+            normal_vecs: list[Vector4] = []
             for vertex_normal in vertex_normals:
-                normals.append(
-                    Vector4(
-                        vertex_normal.x, vertex_normal.y, vertex_normal.z, 1
-                    )
+                normal_vecs.append(
+                    Vector4(vertex_normal.x, vertex_normal.y, vertex_normal.z, 1)
                 )
+            normal = self.__clib.createNormal("Normal", normal_vecs)
+            normals.append(normal)
 
-        uvs: list[Vector2] = []
-        uv_layer: bpy.types.MeshUVLoopLayer = bmesh.uv_layers[0]
-        for uv in uv_layer.uv:
-            uvs.append(Vector2(uv.vector.x, uv.vector.y))
-
-        vertices: list[Vector4] = []
-        for vertex in bmesh.vertices:
-            vertices.append(Vector4(vertex.co.x, vertex.co.y, vertex.co.z, 1))
-
-        mesh = self.__clib.createMesh(
-            bmesh.name, vertices, normals, uvs, indices, polys
-        )
-
-        return mesh
+        return normals

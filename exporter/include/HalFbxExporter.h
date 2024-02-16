@@ -23,19 +23,35 @@ extern "C"
         Vector4 emissive;
     };
 
+    struct UV
+    {
+        char* name;
+        size_t name_length;
+        Vector2* uv;
+    };
+
+    struct Normal
+    {
+        char* name;
+        size_t name_length;
+        Vector4* normal;
+    };
+
     struct Mesh
     {
         char* name;
         size_t name_length;
         Vector4* vertices;
-        Vector4* normals;
-        Vector2* uvs;
         size_t vertex_count;
         unsigned int* indices;
         size_t index_count;
         unsigned int* polys; // ポリゴン開始インデックスの配列
         unsigned int* material_indices; // ポリゴンごとのマテリアルインデックス
         size_t poly_count;
+        UV* uv_sets;
+        size_t uv_set_count;
+        Normal* normal_sets;
+        size_t normal_set_count;
     };
 
     struct Object

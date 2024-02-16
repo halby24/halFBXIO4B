@@ -35,7 +35,7 @@ class halFBXIO4BOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         default='binary',
     )
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context):
         layout = self.layout
         layout.label(text="FBX SDKを使用してFBXファイルをエクスポートします。")
 

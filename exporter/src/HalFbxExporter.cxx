@@ -11,6 +11,8 @@
 
 FbxNode* create_node_recursive(FbxScene* scene, ExportData* export_data, Object* object_data);
 FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, double unit_scale);
+void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* target);
+void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target);
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count);
 FbxAMatrix fix_rot_m(FbxAMatrix& input);
 FbxAMatrix fix_scale_m(FbxAMatrix& input, double unit_scale);
@@ -125,23 +127,35 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, d
         mesh->EndPolygon();
     }
 
-    auto elnrm = mesh->CreateElementNormal();
-    elnrm->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
-    elnrm->SetReferenceMode(FbxGeometryElement::eDirect);
-    for (auto i = 0; i < mesh_data->poly_count; i++)
+    for (auto i = 0; i < mesh_data->normal_set_count; i++)
     {
-        auto curr_index = mesh_data->polys[i];
-        auto next_index = (i == mesh_data->poly_count - 1) ? mesh_data->index_count : mesh_data->polys[i + 1];
-
-        for (int j = curr_index; j < next_index; j++) elnrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[j]);
+        auto elnrm = mesh->CreateElementNormal();
+        set_normal(&mesh_data->normal_sets[i], mesh_data->vertex_count, elnrm);
     }
 
-    auto eluv = mesh->CreateElementUV("UVSet");
-    eluv->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
-    eluv->SetReferenceMode(FbxGeometryElement::eDirect);
-    for (auto i = 0; i < mesh_data->index_count; i++) eluv->GetDirectArray().Add(*(FbxVector2*)&mesh_data->uvs[i]);
+    for (auto i = 0; i < mesh_data->uv_set_count; i++)
+    {
+        auto eluv = mesh->CreateElementUV(mesh_data->uv_sets[i].name);
+        set_uv(&mesh_data->uv_sets[i], mesh_data->vertex_count, eluv);
+    }
 
     return mesh;
+}
+
+void set_normal(Normal* input, size_t input_count, FbxGeometryElementNormal* target)
+{
+    target->SetName(input->name);
+    target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+    target->SetReferenceMode(FbxGeometryElement::eDirect);
+    for (auto i = 0; i < input_count; i++) target->GetDirectArray().Add(*(FbxVector4*)input[i].normal);
+}
+
+void set_uv(UV* input, size_t input_count, FbxGeometryElementUV* target)
+{
+    target->SetName(input->name);
+    target->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+    target->SetReferenceMode(FbxGeometryElement::eDirect);
+    for (auto i = 0; i < input_count; i++) target->GetDirectArray().Add(*(FbxVector2*)input[i].uv);
 }
 
 void vertex_normal_from_poly_normal(unsigned int* indices, size_t index_count, unsigned int* polys, size_t poly_count, Vector4* poly_normals, Vector4* out_vertex_normals)

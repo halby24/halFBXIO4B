@@ -34,19 +34,41 @@ class Material(ctypes.Structure):
         fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
         return f"{self.__class__.__name__}({fields})"
 
+class UV(ctypes.Structure):
+    _fields_ = [
+        ('name', ctypes.c_char_p),
+        ('name_length', ctypes.c_size_t),
+        ('uv', ctypes.POINTER(Vector2)),
+    ]
+    def __repr__(self):
+        fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
+        return f"{self.__class__.__name__}({fields})"
+
+class Normal(ctypes.Structure):
+    _fields_ = [
+        ('name', ctypes.c_char_p),
+        ('name_length', ctypes.c_size_t),
+        ('normal', ctypes.POINTER(Vector4)),
+    ]
+    def __repr__(self):
+        fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
+        return f"{self.__class__.__name__}({fields})"
+
 class Mesh(ctypes.Structure):
     _fields_ = [
         ('name', ctypes.c_char_p),
         ('name_length', ctypes.c_size_t),
         ('vertices', ctypes.POINTER(Vector4)),
-        ('normals', ctypes.POINTER(Vector4)),
-        ('uvs', ctypes.POINTER(Vector2)),
         ('vertex_count', ctypes.c_size_t),
         ('indices', ctypes.POINTER(ctypes.c_uint)),
         ('index_count', ctypes.c_size_t),
         ('polys', ctypes.POINTER(ctypes.c_uint)),
         ('material_indices', ctypes.POINTER(ctypes.c_uint)),
         ('poly_count', ctypes.c_size_t),
+        ('uv_sets', ctypes.POINTER(UV)),
+        ('uv_set_count', ctypes.c_size_t),
+        ('normal_sets', ctypes.POINTER(Normal)),
+        ('normal_set_count', ctypes.c_size_t),
     ]
     def __repr__(self):
         fields = ',\n'.join(f"{field}: {getattr(self, field)}" for field, _ in self._fields_)
@@ -133,13 +155,13 @@ class CLib(Singleton):
             materials=materials_ptr,
         )
 
-    def createMesh(self, name: str, vertices: list[Vector4], normals: list[Vector4], uvs: list[Vector2], indices: list[int], polys: list[int]) -> Mesh:
+    def createMesh(self, name: str, vertices: list[Vector4], normals: list[Normal], uvs: list[UV], indices: list[int], polys: list[int]) -> Mesh:
         vertices_array_ptr = ctypes.pointer((Vector4 * len(vertices))(*vertices))
         vertices_ptr = ctypes.cast(vertices_array_ptr, ctypes.POINTER(Vector4))
-        normals_array_ptr = ctypes.pointer((Vector4 * len(normals))(*normals))
-        normals_ptr = ctypes.cast(normals_array_ptr, ctypes.POINTER(Vector4))
-        uvs_array_ptr = ctypes.pointer((Vector2 * len(uvs))(*uvs))
-        uvs_ptr = ctypes.cast(uvs_array_ptr, ctypes.POINTER(Vector2))
+        normals_array_ptr = ctypes.pointer((Normal * len(normals))(*normals))
+        normals_ptr = ctypes.cast(normals_array_ptr, ctypes.POINTER(Normal))
+        uvs_array_ptr = ctypes.pointer((UV * len(uvs))(*uvs))
+        uvs_ptr = ctypes.cast(uvs_array_ptr, ctypes.POINTER(UV))
         indices_array_ptr = ctypes.pointer((ctypes.c_uint * len(indices))(*indices))
         indices_ptr = ctypes.cast(indices_array_ptr, ctypes.POINTER(ctypes.c_uint))
         polys_array_ptr = ctypes.pointer((ctypes.c_uint * len(polys))(*polys))
@@ -148,13 +170,15 @@ class CLib(Singleton):
             name=name.encode('utf-8'),
             name_length=len(name),
             vertices=vertices_ptr,
-            normals=normals_ptr,
-            uvs=uvs_ptr,
             vertex_count=len(vertices),
             indices=indices_ptr,
             index_count=len(indices),
             polys=polys_ptr,
-            poly_count=len(polys)
+            poly_count=len(polys),
+            uv_sets=uvs_ptr,
+            uv_set_count=len(uvs),
+            normal_sets=normals_ptr,
+            normal_set_count=len(normals),
         )
 
     def createMaterial(self, name: str, diffuse: Vector4, specular: Vector4, emissive: Vector4) -> Material:
@@ -164,4 +188,22 @@ class CLib(Singleton):
             diffuse=diffuse,
             specular=specular,
             emissive=emissive,
+        )
+
+    def createUV(self, name: str, uv: list[Vector2]) -> UV:
+        uv_array_ptr = ctypes.pointer((Vector2 * len(uv))(*uv))
+        uv_ptr = ctypes.cast(uv_array_ptr, ctypes.POINTER(Vector2))
+        return UV(
+            name=name.encode('utf-8'),
+            name_length=len(name),
+            uv=uv_ptr
+        )
+
+    def createNormal(self, name: str, normal: list[Vector4]) -> Normal:
+        normal_array_ptr = ctypes.pointer((Vector4 * len(normal))(*normal))
+        normal_ptr = ctypes.cast(normal_array_ptr, ctypes.POINTER(Vector4))
+        return Normal(
+            name=name.encode('utf-8'),
+            name_length=len(name),
+            normal=normal_ptr
         )
