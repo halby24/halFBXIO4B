@@ -136,6 +136,11 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene, d
         for (int j = curr_index; j < next_index; j++) elnrm->GetDirectArray().Add(*(FbxVector4*)&mesh_data->normals[j]);
     }
 
+    auto eluv = mesh->CreateElementUV("UVSet");
+    eluv->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
+    eluv->SetReferenceMode(FbxGeometryElement::eDirect);
+    for (auto i = 0; i < mesh_data->index_count; i++) eluv->GetDirectArray().Add(*(FbxVector2*)&mesh_data->uvs[i]);
+
     return mesh;
 }
 

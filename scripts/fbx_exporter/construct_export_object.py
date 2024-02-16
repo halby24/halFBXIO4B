@@ -24,7 +24,8 @@ class ConstructExportObject:
         )
         scene = bpy.context.scene
         unit_scale = scene.unit_settings.scale_length
-        export_data = self.__clib.createExportData(object, False, unit_scale, mats)
+        materials = [mat[1] for mat in mat_pairs]  # Convert mats to list[Material]
+        export_data = self.__clib.createExportData(object, False, unit_scale, materials)
         return export_data
 
     def __getObjs(
