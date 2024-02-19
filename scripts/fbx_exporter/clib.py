@@ -1,3 +1,4 @@
+# from curses import meta
 import os
 import ctypes
 from .util import Singleton
@@ -55,7 +56,7 @@ class StandardSurface(ctypes.Structure):
         ("sheen_roughness", ctypes.c_double),
         ("coat", ctypes.c_double),
         ("coat_affect_color", Vector4),
-        ("coat_normal", ctypes.c_double),
+        ("coat_normal", Vector4),
         ("coat_roughness", ctypes.c_double),
         ("coat_color", Vector4),
         ("coat_ior", ctypes.c_double),
@@ -71,7 +72,7 @@ class StandardSurface(ctypes.Structure):
         ("subsurface_radius", Vector4),
         ("subsurface_color", Vector4),
         ("metalness", ctypes.c_double),
-        ("opacity", Vector4),
+        ("opacity", ctypes.c_double),
         ("diffuse_roughness", ctypes.c_double),
     ]
 
@@ -163,7 +164,7 @@ Object._fields_ = [
     ("children", ctypes.POINTER(Object)),
     ("child_count", ctypes.c_size_t),
     ("mesh", ctypes.POINTER(Mesh)),
-    ("material_slots", ctypes.POINTER(Material)),
+    ("material_slots", ctypes.POINTER(ctypes.POINTER(Material))),
     ("material_slot_count", ctypes.c_size_t),
 ]
 
@@ -211,24 +212,14 @@ class CLib(Singleton):
     def vertex_normal_from_poly_normal(
         self, indices: list[int], polys: list[int], normals: list[Vector4]
     ) -> list[Vector4]:
-        indices_array_ptr = ctypes.pointer((ctypes.c_uint * len(indices))(*indices))
-        indices_ptr = ctypes.cast(indices_array_ptr, ctypes.POINTER(ctypes.c_uint))
-        polys_array_ptr = ctypes.pointer((ctypes.c_uint * len(polys))(*polys))
-        polys_ptr = ctypes.cast(polys_array_ptr, ctypes.POINTER(ctypes.c_uint))
-        normals_array_ptr = ctypes.pointer((Vector4 * len(normals))(*normals))
-        normals_ptr = ctypes.cast(normals_array_ptr, ctypes.POINTER(Vector4))
         out_vertex_normals_array = (Vector4 * len(indices))()
-        out_vertex_normals_array_ptr = ctypes.pointer(out_vertex_normals_array)
-        out_vertex_normals_ptr = ctypes.cast(
-            out_vertex_normals_array_ptr, ctypes.POINTER(Vector4)
-        )
         self.__lib.vertex_normal_from_poly_normal(
-            indices_ptr,
+            (ctypes.c_uint * len(indices))(*indices),
             len(indices),
-            polys_ptr,
+            (ctypes.c_uint * len(polys))(*polys),
             len(polys),
-            normals_ptr,
-            out_vertex_normals_ptr,
+            (Vector4 * len(normals))(*normals),
+            out_vertex_normals_array,
         )
         return list(out_vertex_normals_array)
 
@@ -238,24 +229,18 @@ class CLib(Singleton):
         local_matrix: list[float],
         children: list[Object],
         mesh: Mesh | None,
-        material_slots: list[Material],
+        material_slots: list[ctypes.POINTER],
     ) -> Object:
-        children_array_ptr = ctypes.pointer((Object * len(children))(*children))
-        children_ptr = ctypes.cast(children_array_ptr, ctypes.POINTER(Object))
-        material_slots_array_ptr = ctypes.pointer(
-            (Material * len(material_slots))(*material_slots)
-        )
-        material_slots_ptr = ctypes.cast(
-            material_slots_array_ptr, ctypes.POINTER(Material)
-        )
         return Object(
             name=name.encode("utf-8"),
             name_length=len(name),
             local_matrix=(ctypes.c_double * 16)(*local_matrix),
-            children=children_ptr,
+            children=(Object * len(children))(*children),
             child_count=len(children),
             mesh=ctypes.pointer(mesh) if mesh else ctypes.POINTER(Mesh)(),
-            material_slots=material_slots_ptr,
+            material_slots=(ctypes.POINTER(Material) * len(material_slots))(
+                *material_slots
+            ),
             material_slot_count=len(material_slots),
         )
 
@@ -264,15 +249,14 @@ class CLib(Singleton):
         root: Object,
         is_binary: bool,
         unit_scale: float,
-        materials: list[Material],
+        materials: ctypes.Array[Material], # Arrayじゃないとアドレスが変わる
     ) -> ExportData:
-        materials_array_ptr = ctypes.pointer((Material * len(materials))(*materials))
-        materials_ptr = ctypes.cast(materials_array_ptr, ctypes.POINTER(Material))
         return ExportData(
             root=ctypes.pointer(root),
             is_binary=is_binary,
             unit_scale=unit_scale,
-            materials=materials_ptr,
+            materials=materials,
+            material_count=len(materials),
         )
 
     def createMesh(
@@ -283,51 +267,60 @@ class CLib(Singleton):
         uvs: list[UV],
         indices: list[int],
         polys: list[int],
+        mat_indices: list[int],
     ) -> Mesh:
-        vertices_array_ptr = ctypes.pointer((Vector4 * len(vertices))(*vertices))
-        vertices_ptr = ctypes.cast(vertices_array_ptr, ctypes.POINTER(Vector4))
-        normals_array_ptr = ctypes.pointer((Normal * len(normals))(*normals))
-        normals_ptr = ctypes.cast(normals_array_ptr, ctypes.POINTER(Normal))
-        uvs_array_ptr = ctypes.pointer((UV * len(uvs))(*uvs))
-        uvs_ptr = ctypes.cast(uvs_array_ptr, ctypes.POINTER(UV))
-        indices_array_ptr = ctypes.pointer((ctypes.c_uint * len(indices))(*indices))
-        indices_ptr = ctypes.cast(indices_array_ptr, ctypes.POINTER(ctypes.c_uint))
-        polys_array_ptr = ctypes.pointer((ctypes.c_uint * len(polys))(*polys))
-        polys_ptr = ctypes.cast(polys_array_ptr, ctypes.POINTER(ctypes.c_uint))
         return Mesh(
             name=name.encode("utf-8"),
             name_length=len(name),
-            vertices=vertices_ptr,
+            vertices=(Vector4 * len(vertices))(*vertices),
             vertex_count=len(vertices),
-            indices=indices_ptr,
+            indices=(ctypes.c_uint * len(indices))(*indices),
             index_count=len(indices),
-            polys=polys_ptr,
+            polys=(ctypes.c_uint * len(polys))(*polys),
+            material_indices=(ctypes.c_uint * len(mat_indices))(*mat_indices),
             poly_count=len(polys),
-            uv_sets=uvs_ptr,
+            uv_sets=(UV * len(uvs))(*uvs),
             uv_set_count=len(uvs),
-            normal_sets=normals_ptr,
+            normal_sets=(Normal * len(normals))(*normals),
             normal_set_count=len(normals),
         )
 
     def createMaterial(
-        self, name: str, diffuse: Vector4, specular: Vector4, emissive: Vector4
+        self,
+        name: str,
+        basecolor: Vector4,
+        metallic: float,
+        roughness: float,
+        emissive: Vector4,
     ) -> Material:
+        print('py opacity: ', basecolor.w)
+        surf = StandardSurface(
+            base=1,
+            base_color=basecolor,
+            emission=1,
+            emission_color=emissive,
+            specular=1,
+            specular_color=basecolor,
+            specular_roughness=roughness,
+            metalness=metallic,
+            opacity=basecolor.w,
+        )
         return Material(
             name=name.encode("utf-8"),
             name_length=len(name),
-            diffuse=diffuse,
-            specular=specular,
-            emissive=emissive,
+            standard_surface=surf,
         )
 
     def createUV(self, name: str, uv: list[Vector2]) -> UV:
-        uv_array_ptr = ctypes.pointer((Vector2 * len(uv))(*uv))
-        uv_ptr = ctypes.cast(uv_array_ptr, ctypes.POINTER(Vector2))
-        return UV(name=name.encode("utf-8"), name_length=len(name), uv=uv_ptr)
+        return UV(
+            name=name.encode("utf-8"),
+            name_length=len(name),
+            uv=(Vector2 * len(uv))(*uv),
+        )
 
     def createNormal(self, name: str, normal: list[Vector4]) -> Normal:
-        normal_array_ptr = ctypes.pointer((Vector4 * len(normal))(*normal))
-        normal_ptr = ctypes.cast(normal_array_ptr, ctypes.POINTER(Vector4))
         return Normal(
-            name=name.encode("utf-8"), name_length=len(name), normal=normal_ptr
+            name=name.encode("utf-8"),
+            name_length=len(name),
+            normal=(Vector4 * len(normal))(*normal),
         )

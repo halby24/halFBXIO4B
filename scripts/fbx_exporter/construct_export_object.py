@@ -5,6 +5,8 @@ import bpy
 import itertools
 from .clib import ExportData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vector4
 import pprint
+import ctypes
+
 
 class ConstructExportObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
@@ -14,24 +16,26 @@ class ConstructExportObject:
     def getExportData(self) -> ExportData:
         mat_pairs = self.__createMatPairs(self.objs)
         objs = self.__getObjs(self.objs, mat_pairs)
-        material_slots = [mat[1] for mat in mat_pairs]  # Convert mats to list[Material]
         object = self.__clib.createObject(
             name="root",
             local_matrix=[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
             children=objs,
             mesh=None,
-            material_slots=material_slots,  # Use the converted material_slots
+            material_slots=[],  # Use the converted material_slots
         )
         scene = bpy.context.scene
         unit_scale = scene.unit_settings.scale_length
-        materials = [mat[1] for mat in mat_pairs]  # Convert mats to list[Material]
+        materials = mat_pairs[1]
+        print("all material pointers:")
+        for mat in materials:
+            print("  ", ctypes.pointer(mat))
         export_data = self.__clib.createExportData(object, False, unit_scale, materials)
         return export_data
 
     def __getObjs(
         self,
         bobjs: list[bpy.types.Object],
-        mat_pairs: list[tuple[bpy.types.Material, Material]],
+        mat_pairs: tuple[list[bpy.types.Material], ctypes.Array[Material]],
     ) -> list[Object]:
         objs: list[Object] = []
         for bobj in bobjs:
@@ -42,11 +46,13 @@ class ConstructExportObject:
             mesh_data = None
             if bobj.type == "MESH":
                 mesh_data = self.__createMesh(bobj.data)
-            mat_slots: list[Material] = []
+            mat_slots: list[ctypes._Pointer[Material]] = []
+            print("object material pointers:")
             for slot in bobj.material_slots:
                 bmat: bpy.types.Material = slot.material
-                mat = mat_pairs[[mat[0] for mat in mat_pairs].index(bmat)][1]
-                mat_slots.append(mat)
+                mat = mat_pairs[1][mat_pairs[0].index(bmat)]
+                mat_slots.append(ctypes.pointer(mat))
+                print("  ", ctypes.pointer(mat))
 
             objs.append(
                 self.__clib.createObject(
@@ -57,38 +63,46 @@ class ConstructExportObject:
 
     def __createMatPairs(
         self, bobjs: list[bpy.types.Object]
-    ) -> list[tuple[bpy.types.Material, Material]]:
+    ) -> tuple[list[bpy.types.Material], ctypes.Array[Material]]:
         bmats: list[bpy.types.Material] = []
         for obj in bobjs:
             for slot in obj.material_slots:
-                mat: bpy.types.Material = slot.material  # type: ignore
+                mat: bpy.types.Material = slot.material
                 if mat not in bmats:
                     bmats.append(mat)
 
-        mats: list[tuple[bpy.types.Material, Material]] = []
+        emats: ctypes.Array[Material] = (Material * len(bmats))()
         for bmat in bmats:
-            mats.append(
-                (
-                    bmat,
-                    self.__clib.createMaterial(
-                        name=bmat.name,
-                        diffuse=Vector4(bmat.diffuse_color[0], bmat.diffuse_color[1], bmat.diffuse_color[2], 1),
-                        specular=Vector4(bmat.specular_color[0], bmat.specular_color[1], bmat.specular_color[2], 1),
-                        emissive=Vector4(0, 0, 0, 1),
-                    ),
-                )
+            emat = self.__clib.createMaterial(
+                name=bmat.name,
+                basecolor=Vector4(
+                    bmat.diffuse_color[0],
+                    bmat.diffuse_color[1],
+                    bmat.diffuse_color[2],
+                    1,
+                ),
+                metallic=bmat.metallic,
+                roughness=bmat.roughness,
+                emissive=Vector4(
+                    bmat.diffuse_color[0],
+                    bmat.diffuse_color[1],
+                    bmat.diffuse_color[2],
+                    1,
+                ),
             )
-
-        return mats
+            emats[bmats.index(bmat)] = emat
+        return (bmats, emats)
 
     def __createMesh(self, bmesh: bpy.types.Mesh) -> Mesh:
         polys: list[int] = []
         indices: list[int] = []
+        mat_indices: list[int] = []
         index = 0
 
         poly_index = 0
         for polygon in bmesh.polygons:
             polys.append(index)
+            mat_indices.append(polygon.material_index)
             poly_index += 1
             for vert in polygon.vertices:
                 indices.append(vert)
@@ -111,12 +125,14 @@ class ConstructExportObject:
             vertices.append(Vector4(vertex.co.x, vertex.co.y, vertex.co.z, 1))
 
         mesh = self.__clib.createMesh(
-            bmesh.name, vertices, normals, uvs, indices, polys
+            bmesh.name, vertices, normals, uvs, indices, polys, mat_indices
         )
 
         return mesh
 
-    def __createNormals(self, bmesh: bpy.types.Mesh, indices: list[int], polys: list[int]) -> list[Normal]:
+    def __createNormals(
+        self, bmesh: bpy.types.Mesh, indices: list[int], polys: list[int]
+    ) -> list[Normal]:
         normals: list[Normal] = []
 
         if len(bmesh.corner_normals) > 0:  # 頂点法線の場合

@@ -38,7 +38,7 @@ extern "C"
         double sheen_roughness;
         double coat;
         Vector4 coat_affect_color;
-        double coat_normal;
+        Vector4 coat_normal;
         double coat_roughness;
         Vector4 coat_color;
         double coat_ior;
@@ -47,7 +47,6 @@ extern "C"
         double coat_anisotropy;
         double thin_walld;
         double thin_film_ior;
-        double thin_film_ior;
         double thin_film_thickness;
         double subsurface;
         double subsurface_scale;
@@ -55,7 +54,7 @@ extern "C"
         Vector4 subsurface_radius;
         Vector4 subsurface_color;
         double metalness;
-        Vector4 opacity;
+        double opacity;
         double diffuse_roughness;
     };
 
@@ -88,7 +87,7 @@ extern "C"
         size_t vertex_count;
         unsigned int* indices;
         size_t index_count;
-        unsigned int* polys;            // ポリゴン開始インデックスの配列
+        unsigned int* polys; // ポリゴン開始インデックスの配列
         unsigned int* material_indices; // ポリゴンごとのマテリアルインデックス
         size_t poly_count;
         UV* uv_sets;
@@ -105,21 +104,27 @@ extern "C"
         Object* children;
         size_t child_count;
         Mesh* mesh; // nullptr if not a mesh
-        Material* material_slots;
+        Material** material_slots;
         size_t material_slot_count;
     };
 
     struct ExportData
     {
         bool is_ascii;
-        double unit_scale; // 1.0 for meters, 0.01 for centimeters, 0.0254 for inches
+        double unit_scale; // 1.0 for meters, 0.01 for centimeters, 0.0254 for
+                           // inches
         Object* root;
         Material* materials;
         size_t material_count;
     };
 
-    DLLEXPORT(bool) export_fbx(const char* export_path, const ExportData* export_data);
+    DLLEXPORT(bool)
+    export_fbx(const char* export_path, const ExportData* export_data);
     DLLEXPORT(void)
-    vertex_normal_from_poly_normal(const unsigned int* indices, size_t index_count, const unsigned int* polys, size_t poly_count, const Vector4* poly_normals, Vector4* out_vertex_normals);
+    vertex_normal_from_poly_normal(const unsigned int* indices,
+                                   size_t index_count,
+                                   const unsigned int* polys, size_t poly_count,
+                                   const Vector4* poly_normals,
+                                   Vector4* out_vertex_normals);
     DLLEXPORT(void) fix_normal_rot(Vector4* normals, size_t normal_count);
 }

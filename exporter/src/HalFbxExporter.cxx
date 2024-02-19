@@ -9,15 +9,15 @@
 #include <cstring>
 #include <iostream>
 #define _USE_MATH_DEFINES
+#include <concepts>
 #include <math.h>
-
 #include <vector>
 
 FbxNode* create_node_recursive(FbxScene* scene, const ExportData* export_data,
                                Object* object_data);
 FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
                      double unit_scale);
-FbxSurfaceMaterial* create_material(FbxScene* scene, const Material* input);
+FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input);
 template <typename T>
 void define_property(FbxSurfaceMaterial* mat, const char* name,
                      const char* shader_name, FbxDataType data_type, T value);
@@ -49,6 +49,14 @@ bool export_fbx(const char* export_path, const ExportData* export_data)
     FbxAnsiToUTF8(path_fbxstr.Buffer(), path_char, NULL);
     path_fbxstr = path_char;
 
+    // マテリアルの設定 (ノードツリーの作成より先に行う必要がある)
+    for (auto i = 0; i < export_data->material_count; i++)
+    {
+        auto emat = export_data->materials[i];
+        auto fmat = create_material(scene, emat);
+        scene->AddMaterial(fmat);
+    }
+
     // ノードツリーの作成
     auto root = export_data->root;
     auto root_node = create_node_recursive(scene, export_data, root);
@@ -61,14 +69,6 @@ bool export_fbx(const char* export_path, const ExportData* export_data)
     for (auto i = 0; i < root->child_count; i++)
     {
         scene->GetRootNode()->AddChild(root_node->GetChild(i));
-    }
-
-    // マテリアルの設定
-    for (auto i = 0; i < export_data->material_count; i++)
-    {
-        auto emat = export_data->materials[i];
-        auto fmat = create_material(scene, emat);
-        scene->AddMaterial(fmat);
     }
 
     // バイナリまたはASCII形式の選択
@@ -112,6 +112,23 @@ FbxNode* create_node_recursive(FbxScene* scene, const ExportData* export_data,
     node->LclRotation.Set(FbxVector4(transform.GetR()));
     node->LclScaling.Set(FbxVector4(transform.GetS()));
 
+    // マテリアルの設定はメッシュの設定より先にやったほうがいい気がする
+    if (object_data->material_slot_count > 0)
+    {
+        for (auto i = 0; i < object_data->material_slot_count; i++)
+        {
+            auto mat = object_data->material_slots[i];
+            for (auto mat_i = 0; mat_i < export_data->material_count; mat_i++)
+            {
+                if (&export_data->materials[mat_i] != mat) continue;
+
+                auto fbx_mat = scene->GetMaterial(mat_i);
+                node->AddMaterial(fbx_mat);
+                break;
+            }
+        }
+    }
+
     if (object_data->mesh != nullptr)
     {
         auto mesh = create_mesh(object_data->mesh, object_data->name, scene,
@@ -154,7 +171,7 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
                               ? mesh_data->index_count
                               : mesh_data->polys[i + 1];
 
-        mesh->BeginPolygon();
+        mesh->BeginPolygon(mesh_data->material_indices[i]);
         for (int j = curr_index; j < next_index; j++)
             mesh->AddPolygon(mesh_data->indices[j]);
         mesh->EndPolygon();
@@ -175,78 +192,84 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
     return mesh;
 }
 
-FbxSurfaceMaterial* create_material(FbxScene* scene, const Material* input)
+// FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input)
+// {
+//     auto mat = FbxSurfaceMaterialUtils::CreateShaderMaterial(
+//         scene, input.name, FBXSDK_SHADING_LANGUAGE_SSSL, "1.0.1",
+//         FBXSDK_RENDERING_API_SSSL, "");
+
+//     FbxProperty prop;
+//     define_property(mat, "Base", "base", FbxFloatDT, input.standard_surface.base);
+//     define_property(mat, "BaseColor", "base_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.base_color.x, input.standard_surface.base_color.y, input.standard_surface.base_color.z));
+//     define_property(mat, "Emission", "emission", FbxFloatDT, input.standard_surface.emission);
+//     define_property(mat, "EmissionColor", "emission_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.emission_color.x, input.standard_surface.emission_color.y, input.standard_surface.emission_color.z));
+//     define_property(mat, "Specular", "specular", FbxFloatDT, input.standard_surface.specular);
+//     define_property(mat, "SpecularIOR", "specular_IOR", FbxFloatDT, input.standard_surface.specular_ior);
+//     define_property(mat, "SpecularColor", "specular_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.specular_color.x, input.standard_surface.specular_color.y, input.standard_surface.specular_color.z));
+//     define_property(mat, "SpecularAnisotropy", "specular_anisotropy",
+//                     FbxFloatDT, input.standard_surface.specular_anisotropy);
+//     define_property(mat, "SpecularRoughness", "specular_roughness", FbxFloatDT,
+//                     input.standard_surface.specular_roughness);
+//     define_property(mat, "SpecularRotation", "specular_rotation", FbxFloatDT,
+//                     input.standard_surface.specular_rotation);
+//     define_property(mat, "Transmission", "transmission", FbxFloatDT, input.standard_surface.transmission);
+//     define_property(mat, "TransmissionDepth", "transmission_depth", FbxFloatDT,
+//                     input.standard_surface.transmission_depth);
+//     define_property(mat, "TransmissionColor", "transmission_color",
+//                     FbxDouble3DT, FbxDouble3(input.standard_surface.transmission_color.x, input.standard_surface.transmission_color.y, input.standard_surface.transmission_color.z));
+//     define_property(mat, "TransmissionScatter", "transmission_scatter",
+//                     FbxDouble3DT, FbxDouble3(input.standard_surface.transmission_scatter.x, input.standard_surface.transmission_scatter.y, input.standard_surface.transmission_scatter.z));
+//     define_property(mat, "TransmissionExtraRoughness",
+//                     "transmission_extra_roughness", FbxFloatDT, input.standard_surface.transmission_extra_roughness);
+//     define_property(mat, "TransmissionDispersion", "transmission_dispersion",
+//                     FbxFloatDT, input.standard_surface.transmission_dispersion);
+//     define_property(mat, "TransmissionScatterAnisotropy",
+//                     "transmission_scatter_anisotropy", FbxFloatDT, input.standard_surface.transmission_scatter_anisotropy);
+//     define_property(mat, "Sheen", "sheen", FbxFloatDT, input.standard_surface.sheen);
+//     define_property(mat, "SheenColor", "sheen_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.sheen_color.x, input.standard_surface.sheen_color.y, input.standard_surface.sheen_color.z));
+//     define_property(mat, "SheenRoughness", "sheen_roughness", FbxFloatDT, input.standard_surface.sheen_roughness);
+//     define_property(mat, "Coat", "coat", FbxFloatDT, input.standard_surface.coat);
+//     define_property(mat, "CoatAffectColor", "coat_affect_color", FbxFloatDT,
+//                     input.standard_surface.coat_affect_color);
+//     define_property(mat, "CoatNormal", "coat_normal", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.coat_normal.x, input.standard_surface.coat_normal.y, input.standard_surface.coat_normal.z));
+//     define_property(mat, "CoatRoughness", "coat_roughness", FbxFloatDT, input.standard_surface.coat_roughness);
+//     define_property(mat, "CoatColor", "coat_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.coat_color.x, input.standard_surface.coat_color.y, input.standard_surface.coat_color.z));
+//     define_property(mat, "CoatIOR", "coat_IOR", FbxFloatDT, input.standard_surface.coat_ior);
+//     define_property(mat, "CoatAffectRoughness", "coat_affect_roughness",
+//                     FbxFloatDT, input.standard_surface.coat_affect_roughness);
+//     define_property(mat, "CoatRotation", "coat_rotation", FbxFloatDT, input.standard_surface.coat_rotation);
+//     define_property(mat, "CoatAnisotropy", "coat_anisotropy", FbxFloatDT, input.standard_surface.coat_anisotropy);
+//     define_property(mat, "ThinWalled", "thin_walled", FbxBoolDT, input.standard_surface.thin_walld);
+//     define_property(mat, "ThinFilmIOR", "thin_film_IOR", FbxFloatDT, input.standard_surface.thin_film_ior);
+//     define_property(mat, "ThinFilmThickness", "thin_film_thickness", FbxFloatDT,
+//                     input.standard_surface.thin_film_thickness);
+//     define_property(mat, "Subsurface", "subsurface", FbxFloatDT, input.standard_surface.subsurface);
+//     define_property(mat, "SubsurfaceScale", "subsurface_scale", FbxFloatDT,
+//                     input.standard_surface.subsurface_scale);
+//     define_property(mat, "SubsurfaceAnisotropy", "subsurface_anisotropy",
+//                     FbxFloatDT, input.standard_surface.subsurface_anisotropy);
+//     define_property(mat, "SubsurfaceRadius", "subsurface_radius", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.subsurface_radius.x, input.standard_surface.subsurface_radius.y, input.standard_surface.subsurface_radius.z));
+//     define_property(mat, "SubsurfaceColor", "subsurface_color", FbxDouble3DT,
+//                     FbxDouble3(input.standard_surface.subsurface_color.x, input.standard_surface.subsurface_color.y, input.standard_surface.subsurface_color.z));
+//     define_property(mat, "Metalness", "metalness", FbxFloatDT, input.standard_surface.metalness);
+//     define_property(mat, "Opacity", "opacity", FbxFloatDT,
+//                     input.standard_surface.opacity);
+//     define_property(mat, "DiffuseRoughness", "diffuse_roughness", FbxFloatDT,
+//                     input.standard_surface.diffuse_roughness);
+
+//     return mat;
+// }
+
+FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input)
 {
-    auto mat = FbxSurfaceMaterialUtils::CreateShaderMaterial(
-        scene, input->name, FBXSDK_SHADING_LANGUAGE_SSSL, "1.0.1",
-        FBXSDK_RENDERING_API_SSSL, "");
-
-    FbxProperty prop;
-    define_property(mat, "Base", "base", FbxFloatDT, 1);
-    define_property(mat, "BaseColor", "base_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "Emission", "emission", FbxFloatDT, 0.0);
-    define_property(mat, "EmissionColor", "emission_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "Specular", "specular", FbxFloatDT, 0.2);
-    define_property(mat, "SpecularIOR", "specular_IOR", FbxFloatDT, 1.5);
-    define_property(mat, "SpecularColor", "specular_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "SpecularAnisotropy", "specular_anisotropy",
-                    FbxFloatDT, 0.0);
-    define_property(mat, "SpecularRoughness", "specular_roughness", FbxFloatDT,
-                    0.4);
-    define_property(mat, "SpecularRotation", "specular_rotation", FbxFloatDT,
-                    0.0);
-    define_property(mat, "Transmission", "transmission", FbxFloatDT, 0.0);
-    define_property(mat, "TransmissionDepth", "transmission_depth", FbxFloatDT,
-                    0.0);
-    define_property(mat, "TransmissionColor", "transmission_color",
-                    FbxDouble3DT, FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "TransmissionScatter", "transmission_scatter",
-                    FbxDouble3DT, FbxDouble3(0.0, 0.0, 0.0));
-    define_property(mat, "TransmissionExtraRoughness",
-                    "transmission_extra_roughness", FbxFloatDT, 0.0);
-    define_property(mat, "TransmissionDispersion", "transmission_dispersion",
-                    FbxFloatDT, 0.0);
-    define_property(mat, "TransmissionScatterAnisotropy",
-                    "transmission_scatter_anisotropy", FbxFloatDT, 0.0);
-    define_property(mat, "Sheen", "sheen", FbxFloatDT, 0.0);
-    define_property(mat, "SheenColor", "sheen_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "SheenRoughness", "sheen_roughness", FbxFloatDT, 0.3);
-    define_property(mat, "Coat", "coat", FbxFloatDT, 0.0);
-    define_property(mat, "CoatAffectColor", "coat_affect_color", FbxFloatDT,
-                    0.0);
-    define_property(mat, "CoatNormal", "coat_normal", FbxDouble3DT,
-                    FbxDouble3(0.0, 0.0, 0.0));
-    define_property(mat, "CoatRoughness", "coat_roughness", FbxFloatDT, 0.1);
-    define_property(mat, "CoatColor", "coat_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "CoatIOR", "coat_IOR", FbxFloatDT, 1.5);
-    define_property(mat, "CoatAffectRoughness", "coat_affect_roughness",
-                    FbxFloatDT, 0.0);
-    define_property(mat, "CoatRotation", "coat_rotation", FbxFloatDT, 0.0);
-    define_property(mat, "CoatAnisotropy", "coat_anisotropy", FbxFloatDT, 0.0);
-    define_property(mat, "ThinWalled", "thin_walled", FbxBoolDT, false);
-    define_property(mat, "ThinFilmIOR", "thin_film_IOR", FbxFloatDT, 1.5);
-    define_property(mat, "ThinFilmThickness", "thin_film_thickness", FbxFloatDT,
-                    0.0);
-    define_property(mat, "Subsurface", "subsurface", FbxFloatDT, 0.0);
-    define_property(mat, "SubsurfaceScale", "subsurface_scale", FbxFloatDT,
-                    1.0);
-    define_property(mat, "SubsurfaceAnisotropy", "subsurface_anisotropy",
-                    FbxFloatDT, 0.0);
-    define_property(mat, "SubsurfaceRadius", "subsurface_radius", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "SubsurfaceColor", "subsurface_color", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "Metalness", "metalness", FbxFloatDT, 0.0);
-    define_property(mat, "Opacity", "opacity", FbxDouble3DT,
-                    FbxDouble3(1.0, 1.0, 1.0));
-    define_property(mat, "DiffuseRoughness", "diffuse_roughness", FbxFloatDT,
-                    0.0);
-
+    auto mat = FbxSurfaceLambert::Create(scene, input.name);
     return mat;
 }
 
@@ -299,7 +322,8 @@ void vertex_normal_from_poly_normal(
         FbxAMatrix m;
         m.SetIdentity();
         m = fix_rot_m(m);
-        normal = *(Vector4*)&m.MultT(*(FbxVector4*)&normal);
+        auto f_nrm = m.MultT(*(FbxVector4*)&normal);
+        normal = *(Vector4*)&f_nrm;
         for (auto j = curr_index; j < next_index; j++)
         {
             vertex_normals[j] = normal;
@@ -318,7 +342,8 @@ void fix_normal_rot(Vector4* normals, size_t normal_count)
     m = fix_rot_m(m);
     for (size_t i = 0; i < normal_count; i++)
     {
-        normals[i] = *(Vector4*)&m.MultT(*(FbxVector4*)&normals[i]);
+        auto f_nrm = m.MultT(*(FbxVector4*)&normals[i]);
+        normals[i] = *(Vector4*)&f_nrm;
     }
 }
 

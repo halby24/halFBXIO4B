@@ -8,7 +8,7 @@ set(FBX_TARGET_SOURCE
     src/HalFbxExporter.cxx
 )
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(FBX_SDK_PATH "" CACHE PATH "Path to the FBX SDK")
 set(FBX_LIB_DIR "${FBX_SDK_PATH}/lib/vs2022/x64/debug")
 
