@@ -1,6 +1,8 @@
 # Copyright 2023 HALBY
 # This software is released under the MIT License, see LICENSE.
 
+from curses import meta
+from math import e
 import bpy
 import itertools
 from .clib import ExportData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vector4
@@ -73,23 +75,7 @@ class ConstructExportObject:
 
         emats: ctypes.Array[Material] = (Material * len(bmats))()
         for bmat in bmats:
-            emat = self.__clib.createMaterial(
-                name=bmat.name,
-                basecolor=Vector4(
-                    bmat.diffuse_color[0],
-                    bmat.diffuse_color[1],
-                    bmat.diffuse_color[2],
-                    1,
-                ),
-                metallic=bmat.metallic,
-                roughness=bmat.roughness,
-                emissive=Vector4(
-                    bmat.diffuse_color[0],
-                    bmat.diffuse_color[1],
-                    bmat.diffuse_color[2],
-                    1,
-                ),
-            )
+            emat = self.__createMatFromShader(bmat.name)
             emats[bmats.index(bmat)] = emat
         return (bmats, emats)
 
@@ -167,3 +153,23 @@ class ConstructExportObject:
             normals.append(normal)
 
         return normals
+
+    def __createMatFromShader(self, name: str) -> Material:
+        mat = bpy.data.materials[name]
+        node_tree = mat.node_tree
+        nodes = node_tree.nodes
+        bsdf: bpy.types.Node = nodes.get("Principled BSDF")
+
+        basecolor: tuple[float, float, float, float] = bsdf.inputs["Base Color"].default_value
+        metallic: float = bsdf.inputs["Metallic"].default_value
+        roughness: float = bsdf.inputs["Roughness"].default_value
+        emissive: tuple[float, float, float, float] = bsdf.inputs["Emission"].default_value
+        opacity: float = bsdf.inputs["Alpha"].default_value
+
+        return self.__clib.createMaterial(
+            name,
+            basecolor=Vector4(basecolor[0], basecolor[1], basecolor[2], opacity),
+            metallic=metallic,
+            roughness=roughness,
+            emissive=Vector4(emissive[0], emissive[1], emissive[2], 1),
+        )
