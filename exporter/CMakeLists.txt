@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.20)
 
 set(FBX_TARGET_NAME halFBXIO4B)
 set(FBX_TARGET_SOURCE
-    include/HalFbxExporter.h
-    src/HalFbxExporter.cxx
+    include/io.h
+    src/io.cpp
 )
 
 set(CMAKE_CXX_STANDARD 20)
