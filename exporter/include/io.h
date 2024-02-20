@@ -108,7 +108,7 @@ extern "C"
         size_t material_slot_count;
     };
 
-    struct ExportData
+    struct IOData
     {
         bool is_ascii;
         double unit_scale; // 1.0 for meters, 0.01 for centimeters, 0.0254 for
@@ -118,13 +118,13 @@ extern "C"
         size_t material_count;
     };
 
+    DLLEXPORT(IOData*) import_fbx(const char* import_path);
     DLLEXPORT(bool)
-    export_fbx(const char* export_path, const ExportData* export_data);
+    export_fbx(const char* export_path, const IOData* export_data);
     DLLEXPORT(void)
-    vertex_normal_from_poly_normal(const unsigned int* indices,
-                                   size_t index_count,
-                                   const unsigned int* polys, size_t poly_count,
-                                   const Vector4* poly_normals,
-                                   Vector4* out_vertex_normals);
+    vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
+                   const unsigned int* polys, size_t poly_count,
+                   const Vector4* poly_normals, Vector4* out_vertex_normals);
     DLLEXPORT(void) fix_normal_rot(Vector4* normals, size_t normal_count);
+    DLLEXPORT(void) delete_iodata(IOData* data);
 }

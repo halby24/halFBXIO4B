@@ -169,7 +169,7 @@ Object._fields_ = [
 ]
 
 
-class ExportData(ctypes.Structure):
+class IOData(ctypes.Structure):
     _fields_ = [
         ("is_binary", ctypes.c_bool),
         ("unit_scale", ctypes.c_double),
@@ -193,9 +193,9 @@ class CLib(Singleton):
         self.__init_functions()
 
     def __init_functions(self):
-        self.__lib.export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(ExportData)]
+        self.__lib.export_fbx.argtypes = [ctypes.c_char_p, ctypes.POINTER(IOData)]
         self.__lib.export_fbx.restype = ctypes.c_bool
-        self.__lib.vertex_normal_from_poly_normal.argtypes = [
+        self.__lib.vnrm_from_pnrm.argtypes = [
             ctypes.POINTER(ctypes.c_uint),
             ctypes.c_size_t,
             ctypes.POINTER(ctypes.c_uint),
@@ -203,17 +203,28 @@ class CLib(Singleton):
             ctypes.POINTER(Vector4),
             ctypes.POINTER(Vector4),
         ]
-        self.__lib.vertex_normal_from_poly_normal.restype = None
+        self.__lib.vnrm_from_pnrm.restype = None
+        self.__lib.import_fbx.argtypes = [ctypes.c_char_p]
+        self.__lib.import_fbx.restype = ctypes.POINTER(IOData)
+        self.__lib.delete_iodata.argtypes = [ctypes.POINTER(IOData)]
+        self.__lib.delete_iodata.restype = None
 
-    def export_fbx(self, filepath: str, export_data: ExportData) -> str:
+    def import_fbx(self, filepath: str) -> IOData:
+        ptr: ctypes.POINTER = self.__lib.import_fbx(filepath.encode("utf-8"))
+        return ptr.contents
+
+    def export_fbx(self, filepath: str, export_data: IOData) -> str:
         export_data_ptr = ctypes.pointer(export_data)
         return self.__lib.export_fbx(filepath.encode("utf-8"), export_data_ptr)
 
-    def vertex_normal_from_poly_normal(
+    def delete_iodata(self, ptr: ctypes._Pointer[IOData]) -> None:
+        self.__lib.delete_iodata(ptr)
+
+    def vnrm_from_pnrm(
         self, indices: list[int], polys: list[int], normals: list[Vector4]
     ) -> list[Vector4]:
         out_vertex_normals_array = (Vector4 * len(indices))()
-        self.__lib.vertex_normal_from_poly_normal(
+        self.__lib.vnrm_from_pnrm(
             (ctypes.c_uint * len(indices))(*indices),
             len(indices),
             (ctypes.c_uint * len(polys))(*polys),
@@ -249,9 +260,9 @@ class CLib(Singleton):
         root: Object,
         is_binary: bool,
         unit_scale: float,
-        materials: ctypes.Array[Material], # Arrayじゃないとアドレスが変わる
-    ) -> ExportData:
-        return ExportData(
+        materials: ctypes.Array[Material],  # Arrayじゃないとアドレスが変わる
+    ) -> IOData:
+        return IOData(
             root=ctypes.pointer(root),
             is_binary=is_binary,
             unit_scale=unit_scale,
@@ -293,7 +304,7 @@ class CLib(Singleton):
         roughness: float,
         emissive: Vector4,
     ) -> Material:
-        print('py opacity: ', basecolor.w)
+        print("py opacity: ", basecolor.w)
         surf = StandardSurface(
             base=1,
             base_color=basecolor,

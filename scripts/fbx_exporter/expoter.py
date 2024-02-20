@@ -2,8 +2,9 @@
 # This software is released under the MIT License, see LICENSE.
 
 import bpy
-from .construct_export_object import ConstructExportObject
+from .construct_export_object import ConstructIOObject
 from .clib import CLib
+
 
 class Exporter:
     def __init__(self) -> None:
@@ -13,7 +14,7 @@ class Exporter:
     def export(self, objs: list[bpy.types.Object], filepath: str, ext: str):
         filepath = bpy.path.ensure_ext(filepath, ext)
 
-        eo = ConstructExportObject(objs)
+        eo = ConstructIOObject(objs)
         data = eo.getExportData()
         result = self.__clib.export_fbx(filepath, data)
 

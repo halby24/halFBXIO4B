@@ -1,21 +1,36 @@
 # Copyright 2023 HALBY
 # This software is released under the MIT License, see LICENSE.
 
-from curses import meta
-from math import e
 import bpy
 import itertools
-from .clib import ExportData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vector4
+from .clib import IOData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vector4
 import pprint
 import ctypes
 
+from scripts.fbx_exporter import clib
 
-class ConstructExportObject:
+
+class ConstructIOObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.__clib = CLib()
         self.objs = objs
 
-    def getExportData(self) -> ExportData:
+    def importData(self, path: str) -> None:
+        idata = self.__clib.import_fbx(path)
+        mats_ptr: ctypes.POINTER = idata.materials
+        imats: ctypes.Array[Material] = mats_ptr.getArray()
+        for imat in imats:
+            bmat = bpy.data.materials.new(mat.name)
+            bmat.use_nodes = True
+            p_bsdf: bpy.types.Node = bmat.node_tree.nodes['Principled BSDF']
+            p_bsdf.inputs['Base Color'].default_value = (imat.basecolor.x, imat.basecolor.y, imat.basecolor.z, mat.basecolor.w)
+            p_bsdf.inputs['Metallic'].default_value = imat.metallic
+            p_bsdf.inputs['Roughness'].default_value = imat.roughness
+            p_bsdf.inputs['Emission'].default_value = (imat.emissive.x, imat.emissive.y, imat.emissive.z, imat.emissive.w)
+            p_bsdf.inputs['Alpha'].default_value = imat.basecolor.w
+        self.__clib.delete_iodata(ctypes.pointer(idata))
+
+    def getExportData(self) -> IOData:
         mat_pairs = self.__createMatPairs(self.objs)
         objs = self.__getObjs(self.objs, mat_pairs)
         object = self.__clib.createObject(
@@ -141,9 +156,7 @@ class ConstructExportObject:
                         1,
                     )
                 )
-            vertex_normals = self.__clib.vertex_normal_from_poly_normal(
-                indices, polys, poly_normals
-            )
+            vertex_normals = self.__clib.vnrm_from_pnrm(indices, polys, poly_normals)
             normal_vecs: list[Vector4] = []
             for vertex_normal in vertex_normals:
                 normal_vecs.append(
@@ -160,10 +173,14 @@ class ConstructExportObject:
         nodes = node_tree.nodes
         bsdf: bpy.types.Node = nodes.get("Principled BSDF")
 
-        basecolor: tuple[float, float, float, float] = bsdf.inputs["Base Color"].default_value
+        basecolor: tuple[float, float, float, float] = bsdf.inputs[
+            "Base Color"
+        ].default_value
         metallic: float = bsdf.inputs["Metallic"].default_value
         roughness: float = bsdf.inputs["Roughness"].default_value
-        emissive: tuple[float, float, float, float] = bsdf.inputs["Emission"].default_value
+        emissive: tuple[float, float, float, float] = bsdf.inputs[
+            "Emission"
+        ].default_value
         opacity: float = bsdf.inputs["Alpha"].default_value
 
         return self.__clib.createMaterial(
