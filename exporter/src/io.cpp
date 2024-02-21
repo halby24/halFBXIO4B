@@ -13,6 +13,7 @@
 #include <math.h>
 #include <vector>
 
+FbxString get_path(const char* path);
 FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
                                Object* object_data);
 FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
@@ -35,10 +36,17 @@ Material* read_materials(FbxScene* scene);
 
 IOData* import_fbx(const char* import_path)
 {
+    auto path_fbxstr = get_path(import_path);
+    if (path_fbxstr.IsEmpty())
+    {
+        std::cerr << "File path is invalid." << std::endl;
+        return nullptr;
+    }
+
     auto manager = FbxManager::Create();
     auto importer = FbxImporter::Create(manager, "");
 
-    if (!importer->Initialize(import_path, -1, manager->GetIOSettings()))
+    if (!importer->Initialize(path_fbxstr, -1, manager->GetIOSettings()))
     {
         std::cerr << "An error occurred while initializing the importer..."
                   << std::endl;
@@ -74,24 +82,15 @@ IOData* import_fbx(const char* import_path)
 
 bool export_fbx(const char* export_path, const IOData* export_data)
 {
-    auto manager = FbxManager::Create();
-    auto scene = FbxScene::Create(manager, "Scene");
-
-    // The example can take a FBX file as an argument.
-    FbxString path_fbxstr(export_path);
-
+    auto path_fbxstr = get_path(export_path);
     if (path_fbxstr.IsEmpty())
     {
         std::cerr << "File path is invalid." << std::endl;
-        manager->Destroy();
         return false;
     }
 
-    std::cerr << "Save path: " << path_fbxstr.Buffer() << std::endl;
-
-    char* path_char = NULL;
-    FbxAnsiToUTF8(path_fbxstr.Buffer(), path_char, NULL);
-    path_fbxstr = path_char;
+    auto manager = FbxManager::Create();
+    auto scene = FbxScene::Create(manager, "Scene");
 
     // マテリアルの設定 (ノードツリーの作成より先に行う必要がある)
     for (auto i = 0; i < export_data->material_count; i++)
@@ -166,8 +165,7 @@ Object* read_node_recursive(FbxNode* node, Material* mats)
             auto fmat = node->GetMaterial(i);
             for (auto mat_i = 0; mat_i < material_count; mat_i++)
             {
-                if (std::strcmp(fmat->GetName(),
-                                mats[mat_i].name) == 0)
+                if (std::strcmp(fmat->GetName(), mats[mat_i].name) == 0)
                 {
                     object->material_slots[i] = &mats[mat_i];
                     break;
@@ -177,6 +175,20 @@ Object* read_node_recursive(FbxNode* node, Material* mats)
     }
 
     return object;
+}
+
+FbxString get_path(const char* path)
+{
+    // The example can take a FBX file as an argument.
+    FbxString path_fbxstr(path);
+
+    std::cerr << "Save path: " << path_fbxstr.Buffer() << std::endl;
+
+    char* path_char = NULL;
+    FbxAnsiToUTF8(path_fbxstr.Buffer(), path_char, NULL);
+    path_fbxstr = path_char;
+
+    return path_fbxstr;
 }
 
 FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
@@ -522,14 +534,16 @@ void vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
     vertex_normals.resize(index_count);
     for (auto i = 0; i < poly_count; i++)
     {
-        auto curr_index = polys[i];
-        auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
         auto normal = poly_normals[i];
         FbxAMatrix m;
         m.SetIdentity();
         m = fix_rot_m(m);
         auto f_nrm = m.MultT(*(FbxVector4*)&normal);
         normal = *(Vector4*)&f_nrm;
+
+        auto curr_index = polys[i];
+        auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
+
         for (auto j = curr_index; j < next_index; j++)
         {
             vertex_normals[j] = normal;
@@ -538,18 +552,6 @@ void vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
     for (auto i = 0; i < index_count; i++)
     {
         out_vertex_normals[i] = vertex_normals[i];
-    }
-}
-
-void fix_normal_rot(Vector4* normals, size_t normal_count)
-{
-    FbxAMatrix m;
-    m.SetIdentity();
-    m = fix_rot_m(m);
-    for (size_t i = 0; i < normal_count; i++)
-    {
-        auto f_nrm = m.MultT(*(FbxVector4*)&normals[i]);
-        normals[i] = *(Vector4*)&f_nrm;
     }
 }
 
@@ -562,14 +564,17 @@ void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
     m.SetIdentity();
     m = fix_rot_m(m);
     m = fix_scale_m(m, unit_scale);
-    for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
+    for (size_t i = 0; i < vertex_count; i++)
+    {
+        vecs[i] = m.MultT(vecs[i]);
+    }
 }
 
 FbxAMatrix fix_rot_m(const FbxAMatrix& input)
 {
     FbxAMatrix m(input);
     auto rad = cos(M_PI / 4.0);
-    m.SetQ(FbxQuaternion(rad, 0, 0, rad)); // Z-up to Y-up
+    m.SetQ(FbxQuaternion(rad, 0, 0, -rad)); // Z-up to Y-up
     return m;
 }
 

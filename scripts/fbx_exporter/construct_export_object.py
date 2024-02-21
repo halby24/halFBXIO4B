@@ -22,12 +22,22 @@ class ConstructIOObject:
         for imat in imats:
             bmat = bpy.data.materials.new(mat.name)
             bmat.use_nodes = True
-            p_bsdf: bpy.types.Node = bmat.node_tree.nodes['Principled BSDF']
-            p_bsdf.inputs['Base Color'].default_value = (imat.basecolor.x, imat.basecolor.y, imat.basecolor.z, mat.basecolor.w)
-            p_bsdf.inputs['Metallic'].default_value = imat.metallic
-            p_bsdf.inputs['Roughness'].default_value = imat.roughness
-            p_bsdf.inputs['Emission'].default_value = (imat.emissive.x, imat.emissive.y, imat.emissive.z, imat.emissive.w)
-            p_bsdf.inputs['Alpha'].default_value = imat.basecolor.w
+            p_bsdf: bpy.types.Node = bmat.node_tree.nodes["Principled BSDF"]
+            p_bsdf.inputs["Base Color"].default_value = (
+                imat.basecolor.x,
+                imat.basecolor.y,
+                imat.basecolor.z,
+                mat.basecolor.w,
+            )
+            p_bsdf.inputs["Metallic"].default_value = imat.metallic
+            p_bsdf.inputs["Roughness"].default_value = imat.roughness
+            p_bsdf.inputs["Emission"].default_value = (
+                imat.emissive.x,
+                imat.emissive.y,
+                imat.emissive.z,
+                imat.emissive.w,
+            )
+            p_bsdf.inputs["Alpha"].default_value = imat.basecolor.w
         self.__clib.delete_iodata(ctypes.pointer(idata))
 
     def getExportData(self) -> IOData:
@@ -43,9 +53,6 @@ class ConstructIOObject:
         scene = bpy.context.scene
         unit_scale = scene.unit_settings.scale_length
         materials = mat_pairs[1]
-        print("all material pointers:")
-        for mat in materials:
-            print("  ", ctypes.pointer(mat))
         export_data = self.__clib.createExportData(object, False, unit_scale, materials)
         return export_data
 
@@ -64,12 +71,10 @@ class ConstructIOObject:
             if bobj.type == "MESH":
                 mesh_data = self.__createMesh(bobj.data)
             mat_slots: list[ctypes._Pointer[Material]] = []
-            print("object material pointers:")
             for slot in bobj.material_slots:
                 bmat: bpy.types.Material = slot.material
                 mat = mat_pairs[1][mat_pairs[0].index(bmat)]
                 mat_slots.append(ctypes.pointer(mat))
-                print("  ", ctypes.pointer(mat))
 
             objs.append(
                 self.__clib.createObject(
@@ -179,7 +184,7 @@ class ConstructIOObject:
         metallic: float = bsdf.inputs["Metallic"].default_value
         roughness: float = bsdf.inputs["Roughness"].default_value
         emissive: tuple[float, float, float, float] = bsdf.inputs[
-            "Emission"
+            "Emission Color"
         ].default_value
         opacity: float = bsdf.inputs["Alpha"].default_value
 

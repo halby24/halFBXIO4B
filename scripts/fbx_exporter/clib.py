@@ -217,7 +217,7 @@ class CLib(Singleton):
         export_data_ptr = ctypes.pointer(export_data)
         return self.__lib.export_fbx(filepath.encode("utf-8"), export_data_ptr)
 
-    def delete_iodata(self, ptr: ctypes._Pointer[IOData]) -> None:
+    def delete_iodata(self, ptr: ctypes.POINTER) -> None:
         self.__lib.delete_iodata(ptr)
 
     def vnrm_from_pnrm(
@@ -304,7 +304,6 @@ class CLib(Singleton):
         roughness: float,
         emissive: Vector4,
     ) -> Material:
-        print("py opacity: ", basecolor.w)
         surf = StandardSurface(
             base=1,
             base_color=basecolor,
