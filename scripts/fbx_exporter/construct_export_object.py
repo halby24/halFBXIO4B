@@ -66,7 +66,7 @@ class ConstructIOObject:
             name = bobj.name
             m: list[list[float]] = bobj.matrix_local
             matrix_local = list(itertools.chain.from_iterable(m))
-            children: list[Object] = []
+            children: list[Object] = self.__getObjs(list(bobj.children), mat_pairs)
             mesh_data = None
             if bobj.type == "MESH":
                 mesh_data = self.__createMesh(bobj.data)
@@ -87,7 +87,16 @@ class ConstructIOObject:
         self, bobjs: list[bpy.types.Object]
     ) -> tuple[list[bpy.types.Material], ctypes.Array[Material]]:
         bmats: list[bpy.types.Material] = []
+
+        allbobjs: list[bpy.types.Object] = []
         for obj in bobjs:
+            if obj not in allbobjs:
+                allbobjs.append(obj)
+            for child in list(obj.children):
+                if child not in allbobjs:
+                    allbobjs.append(child)
+
+        for obj in allbobjs:
             for slot in obj.material_slots:
                 mat: bpy.types.Material = slot.material
                 if mat not in bmats:
