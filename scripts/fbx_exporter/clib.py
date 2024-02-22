@@ -171,7 +171,7 @@ Object._fields_ = [
 
 class IOData(ctypes.Structure):
     _fields_ = [
-        ("is_binary", ctypes.c_bool),
+        ("is_ascii", ctypes.c_bool),
         ("unit_scale", ctypes.c_double),
         ("root", ctypes.POINTER(Object)),
         ("materials", ctypes.POINTER(Material)),
@@ -258,13 +258,14 @@ class CLib(Singleton):
     def createExportData(
         self,
         root: Object,
-        is_binary: bool,
+        is_ascii: bool,
         unit_scale: float,
         materials: ctypes.Array[Material],  # Arrayじゃないとアドレスが変わる
     ) -> IOData:
+        print('is_ascii:', is_ascii)
         return IOData(
             root=ctypes.pointer(root),
-            is_binary=is_binary,
+            is_ascii=is_ascii,
             unit_scale=unit_scale,
             materials=materials,
             material_count=len(materials),

@@ -1,6 +1,7 @@
 # Copyright 2023 HALBY
 # This software is released under the MIT License, see LICENSE.
 
+from operator import is_
 import bpy
 import bpy_extras
 from bpy.props import StringProperty, EnumProperty
@@ -12,7 +13,7 @@ class halFBXIO4BOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     bl_label = "halFBXIO4B"
     bl_options = {'UNDO', 'PRESET'}
 
-    export_service = Exporter()
+    exporter = Exporter()
 
     # ExportHelper mixin class uses this
     filename_ext = ".fbx"
@@ -47,7 +48,8 @@ class halFBXIO4BOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         objs = context.selected_objects
         filepath: str = self.filepath
         ext = self.filename_ext
-        self.export_service.export(objs, filepath, ext)
+        is_ascii = self.save_format == 'ascii'
+        self.exporter.export(objs, is_ascii, filepath, ext)
 
         return {'FINISHED'}
 

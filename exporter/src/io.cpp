@@ -32,8 +32,11 @@ void recursive_delete_object(Object* object);
 void delete_mesh(Mesh* mesh);
 Object* read_node_recursive(FbxNode* node, Material* mats);
 Mesh* read_mesh(FbxMesh* fmesh);
-Material* read_materials(FbxScene* scene);
+int read_materials(FbxScene* scene, Material** out_mats);
 
+/// @brief FBXファイルをインポートする
+/// @param import_path インポートするファイルのパス
+/// @return インポートされたデータ
 IOData* import_fbx(const char* import_path)
 {
     auto path_fbxstr = get_path(import_path);
@@ -66,7 +69,8 @@ IOData* import_fbx(const char* import_path)
         return nullptr;
     }
 
-    auto mats = read_materials(scene);
+    Material* mats = nullptr;
+    auto mat_count = read_materials(scene, &mats);
     auto root = read_node_recursive(root_node, mats);
 
     manager->Destroy();
@@ -76,10 +80,15 @@ IOData* import_fbx(const char* import_path)
     data->unit_scale = 0.01;
     data->is_ascii = true;
     data->materials = mats;
+    data->material_count = mat_count;
 
     return data;
 }
 
+/// @brief FBXファイルをエクスポートする
+/// @param export_path エクスポート先のパス
+/// @param export_data エクスポートするデータ
+/// @return エクスポートに成功したかどうか
 bool export_fbx(const char* export_path, const IOData* export_data)
 {
     auto path_fbxstr = get_path(export_path);
@@ -138,6 +147,10 @@ bool export_fbx(const char* export_path, const IOData* export_data)
     return true;
 }
 
+/// @brief ノードを再帰的に読み込む
+/// @param node ノード
+/// @param mats マテリアル
+/// @return 読み込まれたノード
 Object* read_node_recursive(FbxNode* node, Material* mats)
 {
     if (node == nullptr) return nullptr;
@@ -177,6 +190,9 @@ Object* read_node_recursive(FbxNode* node, Material* mats)
     return object;
 }
 
+/// @brief パスのバリデーション
+/// @param path パス
+/// @return バリデーションされたパス
 FbxString get_path(const char* path)
 {
     // The example can take a FBX file as an argument.
@@ -191,6 +207,11 @@ FbxString get_path(const char* path)
     return path_fbxstr;
 }
 
+/// @brief ノードを再帰的に作成する
+/// @param scene シーン
+/// @param export_data エクスポートデータ
+/// @param object_data オブジェクトデータ
+/// @return 作成されたノード
 FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
                                Object* object_data)
 {
@@ -247,6 +268,9 @@ FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
     return node;
 }
 
+/// @brief メッシュを読み込む
+/// @param fmesh 読み込むメッシュ
+/// @return 読み込まれたメッシュ
 Mesh* read_mesh(FbxMesh* fmesh)
 {
     if (fmesh == nullptr) return nullptr;
@@ -255,6 +279,7 @@ Mesh* read_mesh(FbxMesh* fmesh)
     imesh->name = new char[strlen(fmesh->GetName()) + 1];
     std::strcpy(imesh->name, fmesh->GetName());
 
+    // 頂点の追加
     imesh->vertex_count = fmesh->GetControlPointsCount();
     imesh->vertices = new Vector4[imesh->vertex_count];
     auto control_points = fmesh->GetControlPoints();
@@ -263,16 +288,19 @@ Mesh* read_mesh(FbxMesh* fmesh)
         imesh->vertices[i] = *(Vector4*)&control_points[i];
     }
 
+    // 頂点インデックスの設定
     imesh->index_count = fmesh->GetPolygonVertexCount();
     imesh->indices = new unsigned int[imesh->index_count];
     std::memcpy(imesh->indices, fmesh->GetPolygonVertices(),
                 imesh->index_count * sizeof(unsigned int));
 
+    // 面の設定
     imesh->poly_count = fmesh->GetPolygonCount();
     imesh->polys = new unsigned int[imesh->poly_count];
     std::memcpy(imesh->polys, fmesh->GetPolygonVertices(),
                 imesh->poly_count * sizeof(unsigned int));
 
+    // マテリアルの設定
     imesh->material_indices = new unsigned int[imesh->poly_count];
     for (auto i = 0; i < imesh->poly_count; i++)
     {
@@ -280,6 +308,7 @@ Mesh* read_mesh(FbxMesh* fmesh)
             fmesh->GetElementMaterial()->GetIndexArray().GetAt(i);
     }
 
+    // UVの設定
     imesh->uv_set_count = fmesh->GetElementUVCount();
     imesh->uv_sets = new UV[imesh->uv_set_count];
     for (auto i = 0; i < imesh->uv_set_count; i++)
@@ -295,6 +324,7 @@ Mesh* read_mesh(FbxMesh* fmesh)
         }
     }
 
+    // 頂点法線の設定
     imesh->normal_set_count = fmesh->GetElementNormalCount();
     imesh->normal_sets = new Normal[imesh->normal_set_count];
     for (auto i = 0; i < imesh->normal_set_count; i++)
@@ -313,6 +343,12 @@ Mesh* read_mesh(FbxMesh* fmesh)
     return imesh;
 }
 
+/// @brief メッシュを作成する
+/// @param mesh_data メッシュのデータ
+/// @param name メッシュの名前
+/// @param scene メッシュを登録するシーン
+/// @param unit_scale 単位
+/// @return 作成されたメッシュ
 FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
                      double unit_scale)
 {
@@ -326,6 +362,7 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
     std::memcpy(control_points, mesh_data->vertices,
                 mesh_data->vertex_count * sizeof(Vector4));
 
+    // メッシュのポリゴンを設定
     for (auto i = 0; i < mesh_data->poly_count; i++)
     {
         auto curr_index = mesh_data->polys[i];
@@ -333,38 +370,55 @@ FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
                               ? mesh_data->index_count
                               : mesh_data->polys[i + 1];
 
-        mesh->BeginPolygon(mesh_data->material_indices[i]);
+        mesh->BeginPolygon();
         for (int j = curr_index; j < next_index; j++)
             mesh->AddPolygon(mesh_data->indices[j]);
         mesh->EndPolygon();
     }
 
+    // 頂点法線の設定
     for (auto i = 0; i < mesh_data->normal_set_count; i++)
     {
         auto elnrm = mesh->CreateElementNormal();
         set_normal(&mesh_data->normal_sets[i], mesh_data->index_count, elnrm);
     }
 
+    // UVの設定
     for (auto i = 0; i < mesh_data->uv_set_count; i++)
     {
         auto eluv = mesh->CreateElementUV(mesh_data->uv_sets[i].name);
         set_uv(&mesh_data->uv_sets[i], mesh_data->index_count, eluv);
     }
 
+    // マテリアルの設定
+    auto elmat = mesh->CreateElementMaterial();
+    elmat->SetMappingMode(FbxGeometryElement::eByPolygon);
+    elmat->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+    elmat->GetIndexArray().SetCount(mesh_data->poly_count);
+    for (auto i = 0; i < mesh_data->poly_count; i++)
+    {
+        elmat->GetIndexArray().SetAt(i, mesh_data->material_indices[i]);
+    }
+
     return mesh;
 }
 
-Material* read_materials(FbxScene* scene)
+/// @brief マテリアルを読み込む
+/// @param scene マテリアルを読み込むシーン
+/// @param out_mats マテリアルの出力先
+/// @return マテリアルの個数
+int read_materials(FbxScene* scene, Material** out_mats)
 {
-    auto material_count = scene->GetMaterialCount();
-    auto materials = new Material[material_count];
-    for (auto i = 0; i < material_count; i++)
+    auto mat_count = scene->GetMaterialCount();
+    auto mats = new Material[mat_count];
+    for (auto i = 0; i < mat_count; i++)
     {
         auto fbx_mat = scene->GetMaterial(i);
-        materials[i].name = new char[strlen(fbx_mat->GetName()) + 1];
-        std::strcpy(materials[i].name, fbx_mat->GetName());
+        mats[i].name = new char[strlen(fbx_mat->GetName()) + 1];
+        std::strcpy(mats[i].name, fbx_mat->GetName());
     }
-    return materials;
+    *out_mats = mats;
+    return mat_count;
 }
 
 // FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input)
@@ -485,9 +539,23 @@ Material* read_materials(FbxScene* scene)
 //     return mat;
 // }
 
+/// @brief マテリアルを作成する
+/// @param scene マテリアルを登録するシーン
+/// @param input マテリアルのデータ
+/// @return 作成されたマテリアル
 FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input)
 {
     auto mat = FbxSurfaceLambert::Create(scene, input.name);
+    mat->Ambient.Set(FbxDouble3(input.standard_surface.base_color.x,
+                                input.standard_surface.base_color.y,
+                                input.standard_surface.base_color.z));
+    mat->Diffuse.Set(FbxDouble3(input.standard_surface.base_color.x,
+                                input.standard_surface.base_color.y,
+                                input.standard_surface.base_color.z));
+    mat->TransparencyFactor.Set(1.0 - input.standard_surface.opacity);
+    mat->Emissive.Set(FbxDouble3(input.standard_surface.emission_color.x,
+                                input.standard_surface.emission_color.y,
+                                input.standard_surface.emission_color.z));
     return mat;
 }
 
@@ -500,6 +568,10 @@ void define_property(FbxSurfaceMaterial* mat, const char* name,
     if (prop.IsValid()) prop.Set<T>(value);
 }
 
+/// @brief メッシュに対して頂点法線を設定する
+/// @param input 頂点法線のデータ (配列)
+/// @param input_count 頂点法線の数
+/// @param target 設定する対象のジオメトリ
 void set_normal(const Normal* input, size_t input_count,
                 FbxGeometryElementNormal* target)
 {
@@ -514,6 +586,10 @@ void set_normal(const Normal* input, size_t input_count,
     }
 }
 
+/// @brief メッシュに対してUVを設定する
+/// @param input UVのデータ (配列)
+/// @param input_count UVの数
+/// @param target 設定する対象のジオメトリ
 void set_uv(const UV* input, size_t input_count, FbxGeometryElementUV* target)
 {
     target->SetName(input->name);
@@ -526,6 +602,13 @@ void set_uv(const UV* input, size_t input_count, FbxGeometryElementUV* target)
     }
 }
 
+/// @brief 面法線から頂点法線を計算する
+/// @param indices 頂点インデックスの配列
+/// @param index_count 頂点インデックスの数
+/// @param polys ポリゴン開始インデックスの配列
+/// @param poly_count ポリゴン数
+/// @param poly_normals ポリゴン法線の配列
+/// @param out_vertex_normals 計算した頂点法線の出力先
 void vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
                     const unsigned int* polys, size_t poly_count,
                     const Vector4* poly_normals, Vector4* out_vertex_normals)
@@ -555,6 +638,10 @@ void vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
     }
 }
 
+/// @brief ジオメトリの座標系を修正する
+/// @param unit_scale 単位
+/// @param vertices 修正する頂点の配列
+/// @param vertex_count 頂点の数
 void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
 {
     auto cm_scale = unit_scale * 100.0;
@@ -564,12 +651,12 @@ void fix_coord(double unit_scale, Vector4* vertices, size_t vertex_count)
     m.SetIdentity();
     m = fix_rot_m(m);
     m = fix_scale_m(m, unit_scale);
-    for (size_t i = 0; i < vertex_count; i++)
-    {
-        vecs[i] = m.MultT(vecs[i]);
-    }
+    for (size_t i = 0; i < vertex_count; i++) { vecs[i] = m.MultT(vecs[i]); }
 }
 
+/// @brief 座標系を修正する行列を作成する
+/// @param input 入力行列
+/// @return 修正された行列
 FbxAMatrix fix_rot_m(const FbxAMatrix& input)
 {
     FbxAMatrix m(input);
@@ -578,6 +665,10 @@ FbxAMatrix fix_rot_m(const FbxAMatrix& input)
     return m;
 }
 
+/// @brief 大きさを修正する行列を作成する
+/// @param input 入力行列
+/// @param unit_scale 単位
+/// @return 修正された行列
 FbxAMatrix fix_scale_m(const FbxAMatrix& input, double unit_scale)
 {
     FbxAMatrix m(input);
@@ -586,6 +677,8 @@ FbxAMatrix fix_scale_m(const FbxAMatrix& input, double unit_scale)
     return m;
 }
 
+/// @brief IODataのメモリを解放する
+/// @param data 解放するデータ
 void delete_iodata(IOData* data)
 {
     if (data == nullptr) return;
@@ -594,6 +687,8 @@ void delete_iodata(IOData* data)
     delete data;
 }
 
+/// @brief Objectのメモリを再帰的に解放する
+/// @param object 解放するオブジェクト
 void recursive_delete_object(Object* object)
 {
     if (object == nullptr) return;
@@ -611,6 +706,8 @@ void recursive_delete_object(Object* object)
     delete object;
 }
 
+/// @brief Meshのメモリを解放する
+/// @param mesh 解放するメッシュ
 void delete_mesh(Mesh* mesh)
 {
     if (mesh == nullptr) return;

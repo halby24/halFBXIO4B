@@ -7,9 +7,6 @@ from .clib import IOData, Material, Mesh, UV, Normal, Object, CLib, Vector2, Vec
 import pprint
 import ctypes
 
-from scripts.fbx_exporter import clib
-
-
 class ConstructIOObject:
     def __init__(self, objs: list[bpy.types.Object]) -> None:
         self.__clib = CLib()
@@ -40,7 +37,7 @@ class ConstructIOObject:
             p_bsdf.inputs["Alpha"].default_value = imat.basecolor.w
         self.__clib.delete_iodata(ctypes.pointer(idata))
 
-    def getExportData(self) -> IOData:
+    def getExportData(self, is_ascii: bool) -> IOData:
         mat_pairs = self.__createMatPairs(self.objs)
         objs = self.__getObjs(self.objs, mat_pairs)
         object = self.__clib.createObject(
@@ -53,7 +50,7 @@ class ConstructIOObject:
         scene = bpy.context.scene
         unit_scale = scene.unit_settings.scale_length
         materials = mat_pairs[1]
-        export_data = self.__clib.createExportData(object, False, unit_scale, materials)
+        export_data = self.__clib.createExportData(object, is_ascii, unit_scale, materials)
         return export_data
 
     def __getObjs(

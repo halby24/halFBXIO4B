@@ -11,11 +11,11 @@ class Exporter:
         self.__clib = CLib()
         pass
 
-    def export(self, objs: list[bpy.types.Object], filepath: str, ext: str):
+    def export(self, objs: list[bpy.types.Object], is_ascii: bool, filepath: str, ext: str):
         filepath = bpy.path.ensure_ext(filepath, ext)
 
         eo = ConstructIOObject(objs)
-        data = eo.getExportData()
+        data = eo.getExportData(is_ascii)
         result = self.__clib.export_fbx(filepath, data)
 
         print(result)
