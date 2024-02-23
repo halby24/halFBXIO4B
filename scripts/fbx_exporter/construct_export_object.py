@@ -66,7 +66,9 @@ class ConstructIOObject:
             children: list[Object] = self.__getObjs(list(bobj.children), mat_pairs)
             mesh_data = None
             if bobj.type == "MESH":
-                mesh_data = self.__createMesh(bobj.data)
+                depsgraph = bpy.context.evaluated_depsgraph_get()
+                bmesh = bobj.evaluated_get(depsgraph).data
+                mesh_data = self.__createMesh(bmesh)
             mat_slots: list[ctypes._Pointer[Material]] = []
             for slot in bobj.material_slots:
                 bmat: bpy.types.Material = slot.material
@@ -110,11 +112,11 @@ class ConstructIOObject:
         indices: list[int] = []
         mat_indices: list[int] = []
         index = 0
-
+        is_smooth = bmesh.use_auto_smooth
         poly_index = 0
         for polygon in bmesh.polygons:
             polys.append(index)
-            mat_indices.append(polygon.material_index)
+            mat_indices.append(polygon.material_index - 1)
             poly_index += 1
             for vert in polygon.vertices:
                 indices.append(vert)
@@ -137,7 +139,7 @@ class ConstructIOObject:
             vertices.append(Vector4(vertex.co.x, vertex.co.y, vertex.co.z, 1))
 
         mesh = self.__clib.createMesh(
-            bmesh.name, vertices, normals, uvs, indices, polys, mat_indices
+            bmesh.name, vertices, normals, uvs, indices, polys, mat_indices, is_smooth
         )
 
         return mesh
@@ -184,15 +186,21 @@ class ConstructIOObject:
         nodes = node_tree.nodes
         bsdf: bpy.types.Node = nodes.get("Principled BSDF")
 
-        basecolor: tuple[float, float, float, float] = bsdf.inputs[
-            "Base Color"
-        ].default_value
-        metallic: float = bsdf.inputs["Metallic"].default_value
-        roughness: float = bsdf.inputs["Roughness"].default_value
-        emissive: tuple[float, float, float, float] = bsdf.inputs[
-            "Emission Color"
-        ].default_value
-        opacity: float = bsdf.inputs["Alpha"].default_value
+        basecolor: tuple[float, float, float, float] = (1, 1, 1, 1)
+        metallic: float = 0
+        roughness: float = 0.5
+        emissive: tuple[float, float, float, float] = (0, 0, 0, 1)
+        opacity: float = 1
+        if bsdf is not None:
+            basecolor: tuple[float, float, float, float] = bsdf.inputs[
+                "Base Color"
+            ].default_value
+            metallic: float = bsdf.inputs["Metallic"].default_value
+            roughness: float = bsdf.inputs["Roughness"].default_value
+            emissive: tuple[float, float, float, float] = bsdf.inputs[
+                "Emission Color"
+            ].default_value
+            opacity: float = bsdf.inputs["Alpha"].default_value
 
         return self.__clib.createMaterial(
             name,

@@ -195,7 +195,6 @@ Object* read_node_recursive(FbxNode* node, Material* mats)
 /// @return バリデーションされたパス
 FbxString get_path(const char* path)
 {
-    // The example can take a FBX file as an argument.
     FbxString path_fbxstr(path);
 
     std::cerr << "Save path: " << path_fbxstr.Buffer() << std::endl;
@@ -223,6 +222,7 @@ FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
 
     auto node = FbxNode::Create(scene, object_data->name);
 
+    // ローカルトランスフォームの設定
     FbxAMatrix transform;
     std::memcpy(transform, object_data->matrix_local, 16 * sizeof(double));
     node->LclTranslation.Set(FbxVector4(transform.GetT()));
@@ -246,6 +246,7 @@ FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
         }
     }
 
+    // メッシュデータがある場合はメッシュを作成
     if (object_data->mesh != nullptr)
     {
         auto mesh = create_mesh(object_data->mesh, object_data->name, scene,
@@ -258,6 +259,7 @@ FbxNode* create_node_recursive(FbxScene* scene, const IOData* export_data,
         node->SetNodeAttribute(mesh);
     }
 
+    // 子ノードの作成
     for (auto i = 0; i < object_data->child_count; i++)
     {
         auto child_node = create_node_recursive(scene, export_data,
@@ -349,55 +351,56 @@ Mesh* read_mesh(FbxMesh* fmesh)
 /// @param scene メッシュを登録するシーン
 /// @param unit_scale 単位
 /// @return 作成されたメッシュ
-FbxMesh* create_mesh(const Mesh* mesh_data, const char* name, FbxScene* scene,
+FbxMesh* create_mesh(const Mesh* emesh, const char* name, FbxScene* scene,
                      double unit_scale)
 {
     auto mesh = FbxMesh::Create(scene, name);
 
-    mesh->InitControlPoints(mesh_data->vertex_count);
+    mesh->InitControlPoints(emesh->vertex_count);
     auto control_points = mesh->GetControlPoints();
 
     // メッシュの頂点座標を設定、Z-up to Y-up
-    fix_coord(unit_scale, mesh_data->vertices, mesh_data->vertex_count);
-    std::memcpy(control_points, mesh_data->vertices,
-                mesh_data->vertex_count * sizeof(Vector4));
+    fix_coord(unit_scale, emesh->vertices, emesh->vertex_count);
+    std::memcpy(control_points, emesh->vertices,
+                emesh->vertex_count * sizeof(Vector4));
 
     // メッシュのポリゴンを設定
-    for (auto i = 0; i < mesh_data->poly_count; i++)
+    for (auto i = 0; i < emesh->poly_count; i++)
     {
-        auto curr_index = mesh_data->polys[i];
-        auto next_index = (i == mesh_data->poly_count - 1)
-                              ? mesh_data->index_count
-                              : mesh_data->polys[i + 1];
+        auto curr_index = emesh->polys[i];
+        auto next_index = (i == emesh->poly_count - 1)
+                              ? emesh->index_count
+                              : emesh->polys[i + 1];
 
         mesh->BeginPolygon();
         for (int j = curr_index; j < next_index; j++)
-            mesh->AddPolygon(mesh_data->indices[j]);
+            mesh->AddPolygon(emesh->indices[j]);
         mesh->EndPolygon();
     }
 
     // 頂点法線の設定
-    for (auto i = 0; i < mesh_data->normal_set_count; i++)
+    if (!emesh->is_smooth)
+    for (auto i = 0; i < emesh->normal_set_count; i++)
     {
         auto elnrm = mesh->CreateElementNormal();
-        set_normal(&mesh_data->normal_sets[i], mesh_data->index_count, elnrm);
+        set_normal(&emesh->normal_sets[i], emesh->index_count, elnrm);
     }
 
     // UVの設定
-    for (auto i = 0; i < mesh_data->uv_set_count; i++)
+    for (auto i = 0; i < emesh->uv_set_count; i++)
     {
-        auto eluv = mesh->CreateElementUV(mesh_data->uv_sets[i].name);
-        set_uv(&mesh_data->uv_sets[i], mesh_data->index_count, eluv);
+        auto eluv = mesh->CreateElementUV(emesh->uv_sets[i].name);
+        set_uv(&emesh->uv_sets[i], emesh->index_count, eluv);
     }
 
     // マテリアルの設定
     auto elmat = mesh->CreateElementMaterial();
     elmat->SetMappingMode(FbxGeometryElement::eByPolygon);
     elmat->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
-    elmat->GetIndexArray().SetCount(mesh_data->poly_count);
-    for (auto i = 0; i < mesh_data->poly_count; i++)
+    elmat->GetIndexArray().SetCount(emesh->poly_count);
+    for (auto i = 0; i < emesh->poly_count; i++)
     {
-        elmat->GetIndexArray().SetAt(i, mesh_data->material_indices[i]);
+        elmat->GetIndexArray().SetAt(i, emesh->material_indices[i]);
     }
 
     return mesh;
@@ -554,8 +557,8 @@ FbxSurfaceMaterial* create_material(FbxScene* scene, const Material& input)
                                 input.standard_surface.base_color.z));
     mat->TransparencyFactor.Set(1.0 - input.standard_surface.opacity);
     mat->Emissive.Set(FbxDouble3(input.standard_surface.emission_color.x,
-                                input.standard_surface.emission_color.y,
-                                input.standard_surface.emission_color.z));
+                                 input.standard_surface.emission_color.y,
+                                 input.standard_surface.emission_color.z));
     return mat;
 }
 
@@ -624,6 +627,8 @@ void vnrm_from_pnrm(const unsigned int* indices, size_t index_count,
         auto f_nrm = m.MultT(*(FbxVector4*)&normal);
         normal = *(Vector4*)&f_nrm;
 
+        // polysはポリゴンの開始インデックスの配列
+        // 例: polys = {0, 3, 6, 9} ならば、0-2, 3-5, 6-8, 9-11がポリゴン
         auto curr_index = polys[i];
         auto next_index = (i == poly_count - 1) ? index_count : polys[i + 1];
 

@@ -140,6 +140,7 @@ class Mesh(ctypes.Structure):
         ("uv_set_count", ctypes.c_size_t),
         ("normal_sets", ctypes.POINTER(Normal)),
         ("normal_set_count", ctypes.c_size_t),
+        ("is_smooth", ctypes.c_bool)
     ]
 
     def __repr__(self):
@@ -280,6 +281,7 @@ class CLib(Singleton):
         indices: list[int],
         polys: list[int],
         mat_indices: list[int],
+        is_smooth: bool,
     ) -> Mesh:
         return Mesh(
             name=name.encode("utf-8"),
@@ -295,6 +297,7 @@ class CLib(Singleton):
             uv_set_count=len(uvs),
             normal_sets=(Normal * len(normals))(*normals),
             normal_set_count=len(normals),
+            is_smooth=is_smooth,
         )
 
     def createMaterial(

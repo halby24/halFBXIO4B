@@ -94,6 +94,7 @@ extern "C"
         size_t uv_set_count;
         Normal* normal_sets;
         size_t normal_set_count;
+        bool is_smooth;
     };
 
     struct Object
