@@ -14,27 +14,14 @@ class ConstructIOObject:
 
     def importData(self, path: str) -> None:
         idata = self.__clib.import_fbx(path)
+
         mats_ptr: ctypes.POINTER = idata.materials
         imats: ctypes.Array[Material] = mats_ptr.getArray()
-        for imat in imats:
-            bmat = bpy.data.materials.new(mat.name)
-            bmat.use_nodes = True
-            p_bsdf: bpy.types.Node = bmat.node_tree.nodes["Principled BSDF"]
-            p_bsdf.inputs["Base Color"].default_value = (
-                imat.basecolor.x,
-                imat.basecolor.y,
-                imat.basecolor.z,
-                mat.basecolor.w,
-            )
-            p_bsdf.inputs["Metallic"].default_value = imat.metallic
-            p_bsdf.inputs["Roughness"].default_value = imat.roughness
-            p_bsdf.inputs["Emission"].default_value = (
-                imat.emissive.x,
-                imat.emissive.y,
-                imat.emissive.z,
-                imat.emissive.w,
-            )
-            p_bsdf.inputs["Alpha"].default_value = imat.basecolor.w
+        self.__importMats(imats)
+
+        objs_ptr: ctypes.POINTER = idata.root
+        self.__importObjsRecursive(objs_ptr)
+
         self.__clib.delete_iodata(ctypes.pointer(idata))
 
     def getExportData(self, is_ascii: bool) -> IOData:
@@ -209,3 +196,43 @@ class ConstructIOObject:
             roughness=roughness,
             emissive=Vector4(emissive[0], emissive[1], emissive[2], 1),
         )
+
+    def __importMats(imats: ctypes.Array[Material]):
+        for imat in imats:
+            bmat = bpy.data.materials.new(imat.name)
+            bmat.use_nodes = True
+            p_bsdf: bpy.types.Node = bmat.node_tree.nodes["Principled BSDF"]
+            p_bsdf.inputs["Base Color"].default_value = (
+                imat.basecolor.x,
+                imat.basecolor.y,
+                imat.basecolor.z,
+                mat.basecolor.w,
+            )
+            p_bsdf.inputs["Metallic"].default_value = imat.metallic
+            p_bsdf.inputs["Roughness"].default_value = imat.roughness
+            p_bsdf.inputs["Emission"].default_value = (
+                imat.emissive.x,
+                imat.emissive.y,
+                imat.emissive.z,
+                imat.emissive.w,
+            )
+            p_bsdf.inputs["Alpha"].default_value = imat.basecolor.w
+
+    def __importObjsRecursive(self, node: ctypes.POINTER):
+        if node is None:
+            return
+        iobj = node.contents
+        bobj = bpy.data.objects.new(iobj.name, None)
+        bpy.context.collection.objects.link(bobj)
+        bobj.matrix_local = iobj.matrix_local
+        if iobj.mesh is not None:
+            self.__importMesh(iobj.mesh, bobj)
+        pass
+
+    def __importMesh(self, imesh: ctypes.POINTER, bobj: bpy.types.Object):
+        mesh = imesh.contents
+        bmesh = bpy.data.meshes.new(mesh.name)
+        bmesh.from_pydata(mesh.vertices, [], mesh.polygons)
+        bmesh.update()
+        bobj.data = bmesh
+        pass
