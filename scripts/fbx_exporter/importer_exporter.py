@@ -19,3 +19,13 @@ class Exporter:
         result = self.__clib.export_fbx(filepath, data)
 
         print(result)
+
+class Importer:
+    def __init__(self) -> None:
+        self.__clib = CLib()
+        pass
+
+    def importData(self, path: str) -> None:
+        eo = ConstructIOObject([])
+        eo.importData(path)
+        pass

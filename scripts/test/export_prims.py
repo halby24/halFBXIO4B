@@ -2,7 +2,7 @@
 # This software is released under the MIT License, see LICENSE.
 
 import bpy
-from ..fbx_exporter.expoter import Exporter
+from ..fbx_exporter.importer_exporter import Exporter
 
 # add primitives
 cube = bpy.ops.mesh.primitive_cube_add()

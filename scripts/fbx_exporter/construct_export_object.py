@@ -16,7 +16,9 @@ class ConstructIOObject:
         idata = self.__clib.import_fbx(path)
 
         mats_ptr: ctypes.POINTER = idata.materials
-        imats: ctypes.Array[Material] = mats_ptr.getArray()
+        imats: list[Material] = []
+        for i in range(idata.material_count):
+            imats.append(mats_ptr[i])
         self.__importMats(imats)
 
         objs_ptr: ctypes.POINTER = idata.root
@@ -197,8 +199,9 @@ class ConstructIOObject:
             emissive=Vector4(emissive[0], emissive[1], emissive[2], 1),
         )
 
-    def __importMats(imats: ctypes.Array[Material]):
+    def __importMats(self, imats: list[Material]):
         for imat in imats:
+            name = imat.name
             bmat = bpy.data.materials.new(imat.name)
             bmat.use_nodes = True
             p_bsdf: bpy.types.Node = bmat.node_tree.nodes["Principled BSDF"]
