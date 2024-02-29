@@ -1,6 +1,6 @@
-# HalFbxExporter
+# FBX Importer/Exporter for Blender
 
-Work in progress.
+**WORK IN PROGRESS**
 
 ## ビルド環境構築
 
